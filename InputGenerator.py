@@ -33,6 +33,7 @@ with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtra
     print(tree[0])
 
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt', 1);
+dataRows = len(data.e1)
 
 print data.e1[0:10];
 print data.relations[0:100];

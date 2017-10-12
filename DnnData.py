@@ -88,7 +88,7 @@ class DnnData():
 
 
 
-def dataGen(path, entityFile, dataFile, relationFile, posNeg):
+def dataGen(path, entityFile, dataFile, relationFile):
     entityFile   = path + entityFile;
     dataFile      = path + dataFile;
     relationFile      = path + relationFile;
