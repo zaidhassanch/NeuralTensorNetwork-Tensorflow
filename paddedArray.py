@@ -27,7 +27,8 @@ def memoryUsage():
 print "Starting DNN Network ..."
 batch_size = 1000;
 embedding_size = 100;
-slice_size = 3;
+slice_size   = 3;
+corrupt_size = 1;
 
 
 # tree ids is going to be used
@@ -42,7 +43,7 @@ savePath = '../output/'
 
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
-data.e3 =  np.zeros(shape=(dataRows * 1), dtype=np.int)
+data.e3 =  np.zeros(shape=(dataRows * corrupt_size), dtype=np.int)
 
 with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
     rows = csv.reader(csvfile)
@@ -62,10 +63,14 @@ E_matrix = np.zeros(shape = (100, 67448))
 matVars = loadmat(dataPath + 'wordEmbed.mat');
 word_embeds = matVars['E'];
 
+print 'square ', np.sum(np.square(word_embeds))
+
 #rint word_embeds[:, [0]]
 
 #print word_embeds.shape
 E_matrix[:,1:] = word_embeds
+print 'square ', np.sum(np.square(E_matrix))
+print E_matrix.dtype
 #print E_matrix
 
 print memoryUsage()
@@ -78,35 +83,29 @@ def update_x_2(inputVar):
 
 
 tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
-treeLength_holder = tf.placeholder(tf.float32, [no_of_entities,]);
-E_holder          = tf.placeholder(tf.float32, [embedding_size,67448]);
+treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
+E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
 e1_holder         = tf.placeholder(tf.int32,   [dataRows,]);
 e2_holder         = tf.placeholder(tf.int32,   [dataRows,]);
 relation_holder   = tf.placeholder(tf.int32,   [dataRows,]);
-e3_holder         = tf.placeholder(tf.int32,   [dataRows,]);
+e3_holder         = tf.placeholder(tf.int32,   [dataRows * corrupt_size,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
+
 W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
-W1 = tf.Variable(tf.ones(shape=W1_shape));
+W1 = tf.Variable(tf.ones(shape=W1_shape, dtype = tf.float64));
 W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
-W2 = tf.Variable(tf.ones(shape=W2_shape));
+W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
 b1_shape = [data.num_relations, 1, slice_size,];
-b1 = tf.Variable(tf.ones(shape=b1_shape));
+b1 = tf.Variable(tf.ones(shape=b1_shape, dtype = tf.float64));
 U_shape = [data.num_relations, 1, slice_size,];
-U = tf.Variable(tf.ones(shape=U_shape));
+U = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
-cost  = tf.Variable(0, dtype = tf.float32)
+cost      = tf.Variable(0, dtype = tf.float64)
+totalRows = tf.constant(dataRows, dtype = tf.float64)
+reg_param = tf.constant(0.0001, dtype = tf.float64)
 #x2 = tf.Variable([5])
-#y = tf.cond(pred, lambda: update_x_2(x), lambda: tf.identity(x))
-
-#for i in xrange(data.num_relations):
-#lst = (data.relations == i);
-#U = np.ones(shape = (slice_size, 1, data.num_relations));
-
-
-
 treeLengths = tf.reshape(treeLength_holder, [no_of_entities,1]);
-
 Emat = tf.transpose(E_holder);
 collectedVectors = tf.gather(Emat, tree_holder);
 sumVecs = tf.reduce_sum(collectedVectors, axis = 1);
@@ -156,7 +155,7 @@ for i in xrange(data.num_relations):
 	score_pos		   = tf.matmul(z_pos, UtransposeSpecific);
 	score_neg		   = tf.matmul(z_neg, UtransposeSpecific);
 
-	bias = tf.constant(1, dtype = tf.float32);
+	bias = tf.constant(1, dtype = tf.float64);
 
 	indx = tf.where(tf.greater(score_pos + bias, score_neg))
 	indxJogar = tf.gather(tf.transpose(indx), 0);
@@ -165,20 +164,12 @@ for i in xrange(data.num_relations):
 
 	cost = cost + tf.reduce_sum((scorePosRel + bias) - scoreNegRel);
 
+squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
+squareSum = squareSum +  tf.reduce_sum(tf.square(E_holder)) + tf.reduce_sum(tf.square(U));
+cost = tf.divide(cost,totalRows) + reg_param / 2.0 * squareSum ;
 
-
-
-
-	#firstBiTranspose = tf.transpose(firstBi, perm = ????)
 
 init = tf.global_variables_initializer();
-
-
-
-	#v_pos[k, :] = sum(np.multiply(entVecE1,np.dot(W1[:, :, k, i], entVecE2)))
-	# move second to last and simply dot
-
-	# complete rest of the code with transposes
 
 
 print 'first loop', memoryUsage();
@@ -189,7 +180,9 @@ with tf.Session() as session:
 	print 'before session', memoryUsage()
 
 	session.run(init);
-	entVecRet, aRet, concatRet = session.run([score_neg,indx, cost], 
+
+
+	costRet, squareRet = session.run([cost, squareSum], 
 		feed_dict={tree_holder: out,
 				treeLength_holder: lens, 
 				E_holder         : E_matrix,
@@ -201,9 +194,10 @@ with tf.Session() as session:
 	#print r;
 	#print result
 	#print result.shape;
-	print entVecRet.shape
-	print entVecRet
+	#print entVecRet.shape
+	print costRet
+	print squareRet
 	#print entVecRet[38693]
-	print aRet
-	print concatRet
+	#print aRet
+	#print concatRet
 

@@ -6,7 +6,7 @@ from nueralTensorCost import tensorCost
 import pandas as pd
 import csv
 import math
-flipType = 0;
+flipType = 1;
 
 print "Starting DNN Network ..."
 batch_size = 1000;
@@ -32,7 +32,7 @@ with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtra
     tree = list(rows)
     print(tree[0])
 
-data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt', 1);
+data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt', );
 dataRows = len(data.e1)
 
 print data.e1[0:10];
