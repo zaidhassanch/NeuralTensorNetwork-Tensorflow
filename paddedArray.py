@@ -190,7 +190,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(10):
+	for i in xrange(100):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
