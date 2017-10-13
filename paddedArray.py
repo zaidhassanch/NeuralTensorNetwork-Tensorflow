@@ -242,20 +242,20 @@ with tf.Session() as session:
 	threshold = -0.5;
 
 	for i in xrange(10):
-		threshold = threshold + 0.1 * i;
-		yRetPred = (predictions < 0.);
+		threshold = threshold + 0.1;
+		yRetPred = (predictions < threshold);
 		#print 'yRetPred', yRetPred.shape
 		
 		ySet = np.array([True,False], dtype = np.bool)	# put in the false
 		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
 
-		print yGroundAll
+		#print yGroundAll
 		#print 'yGroundAll', yGroundAll.shape
 		ySorted = np.array([], dtype = np.bool)
 		for i in xrange(data.num_relations):
 			lst = (testData.relations == i);
 			yGnd = yGroundAll[lst];
-			print yGnd
+			#print yGnd
 			ySorted = np.append(ySorted, yGnd)
 
 		#print 'ySorted', ySorted.shape
