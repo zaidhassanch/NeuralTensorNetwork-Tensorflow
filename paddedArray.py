@@ -190,7 +190,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(30):
+	for i in xrange(1):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
@@ -261,6 +261,8 @@ with tf.Session() as session:
 
 		#print 'ySorted', ySorted.shape
 		print 'Accuracy: ', np.mean(yRetPred == ySorted)
+
+		print 'ysorted', np.mean(ySorted)
 
 
 	#print r;
