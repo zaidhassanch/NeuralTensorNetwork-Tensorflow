@@ -235,13 +235,13 @@ with tf.Session() as session:
 			pred			 : flip})
 	
 	predictions = np.ravel(predictions) # Jogar step
-	print predictions
-	print e1Ret
+	#print predictions
+	#print e1Ret
 
 
-	threshold = -0.5;
+	threshold = -0.0;
 
-	for i in xrange(10):
+	for i in xrange(20):
 		threshold = threshold + 0.1;
 		yRetPred = (predictions < threshold);
 		#print 'yRetPred', yRetPred.shape
