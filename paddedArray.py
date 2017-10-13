@@ -88,14 +88,14 @@ def update_x_2(inputVar):
 
 tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
 treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
-E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
+#E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
 e1_holder         = tf.placeholder(tf.int32,   [None,]);
 e2_holder         = tf.placeholder(tf.int32,   [None,]);
 relation_holder   = tf.placeholder(tf.int32,   [None,]);
 e3_holder         = tf.placeholder(tf.int32,   [None,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
-#embeds = tf.Variable(dtype=tf.float32, initial_value=self.entity_embeds,trainable=True)
+E_Var = tf.Variable(dtype=tf.float64, initial_value=E_matrix,trainable=True)
 
 W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
 W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
@@ -112,7 +112,7 @@ batchSize = tf.constant(batch_size, dtype = tf.float64)
 reg_param = tf.constant(0.0001, dtype = tf.float64)
 #x2 = tf.Variable([5])
 treeLengths = tf.reshape(treeLength_holder, [no_of_entities,1]);
-Emat = tf.transpose(E_holder);
+Emat = tf.transpose(E_Var);
 collectedVectors = tf.gather(Emat, tree_holder);
 sumVecs = tf.reduce_sum(collectedVectors, axis = 1);
 entVec = tf.divide(sumVecs,treeLengths);
@@ -173,7 +173,7 @@ for i in xrange(data.num_relations):		#
 	cost = cost + tf.reduce_sum((scorePosRel + bias) - scoreNegRel);
 
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
-squareSum = squareSum +  tf.reduce_sum(tf.square(E_holder)) + tf.reduce_sum(tf.square(U));
+squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
 train_op = tf.train.AdamOptimizer(1e-1).minimize(cost)
 
@@ -190,7 +190,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(1):
+	for i in xrange(10):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
@@ -212,7 +212,6 @@ with tf.Session() as session:
 			costRet, squareRet, _ = session.run([cost, squareSum, train_op], 
 				feed_dict={tree_holder: out,
 						treeLength_holder: lens, 
-						E_holder         : E_matrix,
 						e1_holder        : e1Make,
 						e2_holder        : e2Make,
 						relation_holder  : relMake,
@@ -228,7 +227,6 @@ with tf.Session() as session:
 	predictions, e1Ret = session.run([scorePosNet, e1], 
 	feed_dict={tree_holder: out,
 			treeLength_holder: lens, 
-			E_holder         : E_matrix,
 			e1_holder        : testData.e1,
 			e2_holder        : testData.e2,
 			relation_holder  : testData.relations,
