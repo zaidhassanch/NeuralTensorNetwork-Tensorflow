@@ -173,6 +173,7 @@ for i in xrange(data.num_relations):		#
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_holder)) + tf.reduce_sum(tf.square(U));
 cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
+train_op = tf.train.AdamOptimizer(1e-4).minimize(cost)
 
 
 init = tf.global_variables_initializer();
@@ -187,31 +188,32 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	"""
-	batches = dataRows // batch_size;
-	for j in xrange(batches):
-		indexes = range(j*batch_size,(j+1)*batch_size)
-		#indexes = np.random.random_integers(0,dataRows,size = batch_size)
-		print indexes.shape
-		rel = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
-		e1  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
-		e2  = np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size))
-		e3  = np.zeros(shape=(batch_size * corrupt_size), dtype=np.int)
-		costRet, squareRet = session.run([cost, squareSum], 
-			feed_dict={tree_holder: out,
-					treeLength_holder: lens, 
-					E_holder         : E_matrix,
-					e1_holder        : e1,
-					e2_holder        : e2,
-					relation_holder  : rel,
-					e3_holder        : e3,
-					pred			 : True})
-		print costRet
-		print squareRet
-		exit();
+	for i in xrange(2):
+		batches = dataRows // batch_size;
+		for j in xrange(batches):
+			indexes = range(j*batch_size,(j+1)*batch_size)
+			#indexes = np.random.random_integers(0,dataRows,size = batch_size)
+			#print indexes.shape
+			relMake = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
+			e1Make  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
+			e2Make  = np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size))
+			e3Make  = np.zeros(shape=(batch_size * corrupt_size), dtype=np.int)
+			costRet, squareRet, _ = session.run([cost, squareSum, train_op], 
+				feed_dict={tree_holder: out,
+						treeLength_holder: lens, 
+						E_holder         : E_matrix,
+						e1_holder        : e1Make,
+						e2_holder        : e2Make,
+						relation_holder  : relMake,
+						e3_holder        : e3Make,
+						pred			 : True})
+			print costRet
 
-	"""
+
+
+
 	testData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+	
 	predictions, e1Ret = session.run([scorePosNet, e1], 
 	feed_dict={tree_holder: out,
 			treeLength_holder: lens, 
@@ -245,7 +247,6 @@ with tf.Session() as session:
 
 	print 'ySorted', ySorted.shape
 	print 'Accuracy: ', np.mean(yRetPred == ySorted)
-
 
 
 	#print r;
