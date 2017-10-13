@@ -193,7 +193,7 @@ with tf.Session() as session:
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
 			#indexes = range(j*batch_size,(j+1)*batch_size)
-			indexes = np.random.random_integers(0,dataRows,size = batch_size)
+			indexes = np.random.random_integers(0,dataRows - 1,size = batch_size)
 			#print indexes.shape
 			relMake = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
 			e1Make  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
