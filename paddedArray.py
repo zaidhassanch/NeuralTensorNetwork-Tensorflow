@@ -95,6 +95,7 @@ relation_holder   = tf.placeholder(tf.int32,   [None,]);
 e3_holder         = tf.placeholder(tf.int32,   [None,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
+#embeds = tf.Variable(dtype=tf.float32, initial_value=self.entity_embeds,trainable=True)
 
 W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
 W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
@@ -189,7 +190,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(10):
+	for i in xrange(30):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
