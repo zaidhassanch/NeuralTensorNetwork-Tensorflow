@@ -97,7 +97,7 @@ pred = tf.placeholder(tf.bool, shape=[])
 
 
 W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
-W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 2.0 / embedding_size));
+W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
 W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
 W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));
 b1_shape = [data.num_relations, 1, slice_size,];
@@ -189,7 +189,8 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(1000):
+	for i in xrange(10):
+		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
 			#indexes = range(j*batch_size,(j+1)*batch_size)
@@ -238,24 +239,27 @@ with tf.Session() as session:
 	print e1Ret
 
 
+	threshold = -0.5;
 
-	yRetPred = (predictions < 0.0);
-	print 'yRetPred', yRetPred.shape
-	
-	ySet = np.array([True,False], dtype = np.bool)	# put in the false
-	yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+	for i in xrange(10):
+		threshold = threshold + 0.1 * i;
+		yRetPred = (predictions < 0.);
+		#print 'yRetPred', yRetPred.shape
+		
+		ySet = np.array([True,False], dtype = np.bool)	# put in the false
+		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
 
-	print yGroundAll
-	print 'yGroundAll', yGroundAll.shape
-	ySorted = np.array([], dtype = np.bool)
-	for i in xrange(data.num_relations):
-		lst = (testData.relations == i);
-		yGnd = yGroundAll[lst];
-		print yGnd
-		ySorted = np.append(ySorted, yGnd)
+		print yGroundAll
+		#print 'yGroundAll', yGroundAll.shape
+		ySorted = np.array([], dtype = np.bool)
+		for i in xrange(data.num_relations):
+			lst = (testData.relations == i);
+			yGnd = yGroundAll[lst];
+			print yGnd
+			ySorted = np.append(ySorted, yGnd)
 
-	print 'ySorted', ySorted.shape
-	print 'Accuracy: ', np.mean(yRetPred == ySorted)
+		#print 'ySorted', ySorted.shape
+		print 'Accuracy: ', np.mean(yRetPred == ySorted)
 
 
 	#print r;
