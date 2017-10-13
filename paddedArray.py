@@ -12,6 +12,7 @@ embedding_size = 100;
 slice_size = 3;
 no_of_entities = 38696;
 flipType = 0;
+batch_size = 20000;
 
 
 def memoryUsage():
@@ -25,7 +26,7 @@ def memoryUsage():
 
 
 print "Starting DNN Network ..."
-batch_size = 1000;
+
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 1;
@@ -85,10 +86,10 @@ def update_x_2(inputVar):
 tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
 treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
 E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
-e1_holder         = tf.placeholder(tf.int32,   [dataRows,]);
-e2_holder         = tf.placeholder(tf.int32,   [dataRows,]);
-relation_holder   = tf.placeholder(tf.int32,   [dataRows,]);
-e3_holder         = tf.placeholder(tf.int32,   [dataRows * corrupt_size,]);	# change above too
+e1_holder         = tf.placeholder(tf.int32,   [batch_size,]);
+e2_holder         = tf.placeholder(tf.int32,   [batch_size,]);
+relation_holder   = tf.placeholder(tf.int32,   [batch_size,]);
+e3_holder         = tf.placeholder(tf.int32,   [batch_size,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
 
@@ -102,7 +103,7 @@ U_shape = [data.num_relations, 1, slice_size,];
 U = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
 cost      = tf.Variable(0, dtype = tf.float64)
-totalRows = tf.constant(dataRows, dtype = tf.float64)
+totalRows = tf.constant(batch_size, dtype = tf.float64)
 reg_param = tf.constant(0.0001, dtype = tf.float64)
 #x2 = tf.Variable([5])
 treeLengths = tf.reshape(treeLength_holder, [no_of_entities,1]);
@@ -182,21 +183,26 @@ with tf.Session() as session:
 	session.run(init);
 
 
-	costRet, squareRet = session.run([cost, squareSum], 
-		feed_dict={tree_holder: out,
-				treeLength_holder: lens, 
-				E_holder         : E_matrix,
-				e1_holder        : data.e1,
-				e2_holder        : data.e2,
-				relation_holder  : data.relations,
-				e3_holder        : data.e3,
-				pred			 : True})
+	batches = dataRows // batch_size;
+	for j in xrange(batches):
+		indexes = range(j*batch_size,(j+1)*batch_size)
+		costRet, squareRet = session.run([cost, squareSum], 
+			feed_dict={tree_holder: out,
+					treeLength_holder: lens, 
+					E_holder         : E_matrix,
+					e1_holder        : data.e1[indexes],
+					e2_holder        : data.e2[indexes],
+					relation_holder  : data.relations[indexes],
+					e3_holder        : data.e3[indexes],
+					pred			 : True})
+		print costRet
+		print squareRet
+		exit();
 	#print r;
 	#print result
 	#print result.shape;
 	#print entVecRet.shape
-	print costRet
-	print squareRet
+
 	#print entVecRet[38693]
 	#print aRet
 	#print concatRet
