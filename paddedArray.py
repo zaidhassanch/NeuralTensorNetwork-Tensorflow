@@ -64,8 +64,8 @@ out[mask] = np.concatenate(tree)
 #print out
 
 E_matrix = np.zeros(shape = (100, 67448))
-matVars = loadmat(dataPath + 'wordEmbed.mat');
-word_embeds = matVars['E'];
+matVars = loadmat(dataPath + 'initEmbed.mat');
+word_embeds = matVars['We'];
 
 print 'square ', np.sum(np.square(word_embeds))
 
