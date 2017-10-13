@@ -45,6 +45,9 @@ savePath = '../output/'
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
 
+testData = DnnData.dataGen(dataPath, 'entities.txt', 'test.txt', 'relations.txt');
+testRows = len(testData.e1)
+
 with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
     rows = csv.reader(csvfile)
     tree = list(rows);
@@ -85,10 +88,10 @@ def update_x_2(inputVar):
 tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
 treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
 E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
-e1_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
-e2_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
-relation_holder   = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
-e3_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);	# change above too
+e1_holder         = tf.placeholder(tf.int32,   [None,]);
+e2_holder         = tf.placeholder(tf.int32,   [None,]);
+relation_holder   = tf.placeholder(tf.int32,   [None,]);
+e3_holder         = tf.placeholder(tf.int32,   [None,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
 
@@ -102,6 +105,7 @@ U_shape = [data.num_relations, 1, slice_size,];
 U = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
 cost      = tf.Variable(0, dtype = tf.float64)
+scorePosNet = tf.Variable(tf.zeros(shape = [0,1], dtype = tf.float64));
 batchSize = tf.constant(batch_size, dtype = tf.float64)
 reg_param = tf.constant(0.0001, dtype = tf.float64)
 #x2 = tf.Variable([5])
@@ -112,7 +116,7 @@ sumVecs = tf.reduce_sum(collectedVectors, axis = 1);
 entVec = tf.divide(sumVecs,treeLengths);
 
 # look to eliminate
-for i in xrange(data.num_relations):
+for i in xrange(data.num_relations):		#
 
 	lst = tf.where(tf.equal(relation_holder, i))
 	e1 = tf.gather(e1_holder,lst);
@@ -155,6 +159,8 @@ for i in xrange(data.num_relations):
 	score_pos		   = tf.matmul(z_pos, UtransposeSpecific);
 	score_neg		   = tf.matmul(z_neg, UtransposeSpecific);
 
+	scorePosNet = tf.concat([scorePosNet, score_pos], 0);
+
 	bias = tf.constant(1, dtype = tf.float64);
 
 	indx = tf.where(tf.greater(score_pos + bias, score_neg))
@@ -181,7 +187,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-
+	"""
 	batches = dataRows // batch_size;
 	for j in xrange(batches):
 		indexes = range(j*batch_size,(j+1)*batch_size)
@@ -203,6 +209,45 @@ with tf.Session() as session:
 		print costRet
 		print squareRet
 		exit();
+
+	"""
+	testData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+	predictions, e1Ret = session.run([scorePosNet, e1], 
+	feed_dict={tree_holder: out,
+			treeLength_holder: lens, 
+			E_holder         : E_matrix,
+			e1_holder        : testData.e1,
+			e2_holder        : testData.e2,
+			relation_holder  : testData.relations,
+			e3_holder        : testData.e3,
+			pred			 : True})
+	
+	predictions = np.ravel(predictions) # Jogar step
+	print predictions
+	print e1Ret
+
+
+
+	yRetPred = (predictions < 0.0);
+	print 'yRetPred', yRetPred.shape
+	
+	ySet = np.array([True,False], dtype = np.bool)	# put in the false
+	yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+
+	print yGroundAll
+	print 'yGroundAll', yGroundAll.shape
+	ySorted = np.array([], dtype = np.bool)
+	for i in xrange(data.num_relations):
+		lst = (testData.relations == i);
+		yGnd = yGroundAll[lst];
+		print yGnd
+		ySorted = np.append(ySorted, yGnd)
+
+	print 'ySorted', ySorted.shape
+	print 'Accuracy: ', np.mean(yRetPred == ySorted)
+
+
+
 	#print r;
 	#print result
 	#print result.shape;
