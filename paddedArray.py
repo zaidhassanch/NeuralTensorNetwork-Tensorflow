@@ -95,7 +95,7 @@ relation_holder   = tf.placeholder(tf.int32,   [None,]);
 e3_holder         = tf.placeholder(tf.int32,   [None,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
-E_Var = tf.Variable(dtype=tf.float32, initial_value=E_matrix,trainable=True)
+E_Var = tf.Variable(dtype=tf.float64, initial_value=E_matrix,trainable=True)
 
 W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
 W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
