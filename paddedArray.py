@@ -29,7 +29,7 @@ print "Starting DNN Network ..."
 
 embedding_size = 100;
 slice_size   = 3;
-corrupt_size = 1;
+corrupt_size = 10;
 
 
 # tree ids is going to be used
@@ -44,7 +44,6 @@ savePath = '../output/'
 
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
-data.e3 =  np.zeros(shape=(dataRows * corrupt_size), dtype=np.int)
 
 with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
     rows = csv.reader(csvfile)
@@ -86,10 +85,10 @@ def update_x_2(inputVar):
 tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
 treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
 E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
-e1_holder         = tf.placeholder(tf.int32,   [batch_size,]);
-e2_holder         = tf.placeholder(tf.int32,   [batch_size,]);
-relation_holder   = tf.placeholder(tf.int32,   [batch_size,]);
-e3_holder         = tf.placeholder(tf.int32,   [batch_size,]);	# change above too
+e1_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
+e2_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
+relation_holder   = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);
+e3_holder         = tf.placeholder(tf.int32,   [batch_size * corrupt_size,]);	# change above too
 pred = tf.placeholder(tf.bool, shape=[])
 
 
@@ -103,7 +102,7 @@ U_shape = [data.num_relations, 1, slice_size,];
 U = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
 cost      = tf.Variable(0, dtype = tf.float64)
-totalRows = tf.constant(batch_size, dtype = tf.float64)
+batchSize = tf.constant(batch_size, dtype = tf.float64)
 reg_param = tf.constant(0.0001, dtype = tf.float64)
 #x2 = tf.Variable([5])
 treeLengths = tf.reshape(treeLength_holder, [no_of_entities,1]);
@@ -167,7 +166,7 @@ for i in xrange(data.num_relations):
 
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_holder)) + tf.reduce_sum(tf.square(U));
-cost = tf.divide(cost,totalRows) + reg_param / 2.0 * squareSum ;
+cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
 
 
 init = tf.global_variables_initializer();
@@ -186,14 +185,20 @@ with tf.Session() as session:
 	batches = dataRows // batch_size;
 	for j in xrange(batches):
 		indexes = range(j*batch_size,(j+1)*batch_size)
+		#indexes = np.random.random_integers(0,dataRows,size = batch_size)
+		print indexes.shape
+		rel = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
+		e1  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
+		e2  = np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size))
+		e3  = np.zeros(shape=(batch_size * corrupt_size), dtype=np.int)
 		costRet, squareRet = session.run([cost, squareSum], 
 			feed_dict={tree_holder: out,
 					treeLength_holder: lens, 
 					E_holder         : E_matrix,
-					e1_holder        : data.e1[indexes],
-					e2_holder        : data.e2[indexes],
-					relation_holder  : data.relations[indexes],
-					e3_holder        : data.e3[indexes],
+					e1_holder        : e1,
+					e2_holder        : e2,
+					relation_holder  : rel,
+					e3_holder        : e3,
 					pred			 : True})
 		print costRet
 		print squareRet
