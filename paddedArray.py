@@ -8,6 +8,7 @@ import os
 import psutil
 import DnnData
 import random
+import scipy.io
 
 embedding_size = 100;
 slice_size = 3;
@@ -21,9 +22,6 @@ def memoryUsage():
 	py = psutil.Process(pid)
 	memoryUse = py.memory_info()[0]/1e6;  # memory use in GB...I think
 	print('==> memory use:', memoryUse)
-
-
-
 
 
 print "Starting DNN Network ..."
@@ -42,6 +40,14 @@ corrupt_size = 10;
 dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
+initialPath = '../data/' + dataSet + 'initialize.mat';
+mat = scipy.io.loadmat(initialPath)
+W1Mat = mat['W1Mat'];
+W2Mat = mat['W2Mat'];
+
+print W1Mat.shape
+print W2Mat.shape
+exit()
 
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
@@ -97,10 +103,12 @@ pred = tf.placeholder(tf.bool, shape=[])
 
 E_Var = tf.Variable(dtype=tf.float64, initial_value=E_matrix,trainable=True)
 
-W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
-W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
-W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
-W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));
+#W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
+#W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
+W1 = tf.Variable(dtype=tf.float64, initial_value= W1Mat,trainable=True)
+#W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
+#W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));
+W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
 # b1 and u are extremely simple things
 b1_shape = [data.num_relations, 1, slice_size,];
 b1 = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64));
