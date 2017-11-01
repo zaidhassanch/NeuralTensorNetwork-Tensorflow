@@ -51,6 +51,9 @@ dataRows = len(data.e1)
 testData = DnnData.dataGen(dataPath, 'entities.txt', 'test.txt', 'relations.txt');
 testRows = len(testData.e1)
 
+devData = DnnData.dataGen(dataPath, 'entities.txt', 'dev.txt', 'relations.txt');
+devRows = len(devData.e1)
+
 with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
     rows = csv.reader(csvfile)
     tree = list(rows);
@@ -99,12 +102,14 @@ pred = tf.placeholder(tf.bool, shape=[])
 
 E_Var = tf.Variable(dtype=tf.float64, initial_value=E_matrix,trainable=True)
 
-#W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
-#W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
-W1 = tf.Variable(dtype=tf.float64, initial_value= W1Mat,trainable=True)
-#W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
-#W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));
-W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
+W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
+W1 = tf.Variable(tf.ones(shape=W1_shape, dtype = tf.float64)); #trun
+#W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size)); #trun
+#W1 = tf.Variable(dtype=tf.float64, initial_value= W1Mat,trainable=True)
+W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
+W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
+#W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));	#randuni
+#W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
 # b1 and u are extremely simple things
 b1_shape = [data.num_relations, 1, slice_size,];
 b1 = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64));
@@ -194,7 +199,7 @@ with tf.Session() as session:
 	print 'before session', memoryUsage()
 
 	session.run(init);
-
+	"""
 	for i in xrange(120):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
@@ -223,20 +228,23 @@ with tf.Session() as session:
 						e3_holder        : e3Make,
 						pred			 : flip})
 			print costRet
+		"""
 
 
 
+
+# just the accuracy reproduced please
 	# just a dummy this 
-	testData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+	devData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
 	
 	predictions, e1Ret = session.run([scorePosNet, e1], 
 	feed_dict={tree_holder: out,
 			treeLength_holder: lens, 
-			e1_holder        : testData.e1,
-			e2_holder        : testData.e2,
-			relation_holder  : testData.relations,
-			e3_holder        : testData.e3,
-			pred			 : flip})
+			e1_holder        : devData.e1,
+			e2_holder        : devData.e2,
+			relation_holder  : devData.relations,
+			e3_holder        : devData.e3,
+			pred			 : True})
 	
 	predictions = np.ravel(predictions) # Jogar step
 	#print predictions
@@ -247,31 +255,66 @@ with tf.Session() as session:
 	rmax = np.amax(predictions);
 	lmax = np.amin(predictions);
 
-	threshold = -0.0;
+	print rmax
+	print lmax
+
+	
 
 
-	for i in xrange(20):
-		threshold = threshold + 0.1;
-		yRetPred = (predictions < threshold);
+
+	best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
+	best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
+
+	
+	
+	
+
+	while lmax <= rmax:
+		
+		lmax = lmax + 0.01;
+		yRetPred = (predictions <= lmax);
 		#print 'yRetPred', yRetPred.shape
 		
 		ySet = np.array([True,False], dtype = np.bool)	# put in the false
-		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
 
 		#print yGroundAll
 		#print 'yGroundAll', yGroundAll.shape
+		start = 0;
 		ySorted = np.array([], dtype = np.bool)
 		for i in xrange(data.num_relations):
-			lst = (testData.relations == i);
+			lst = (devData.relations == i);
 			yGnd = yGroundAll[lst];
-			#print yGnd
-			ySorted = np.append(ySorted, yGnd)
 
-		#print 'ySorted', ySorted.shape
-		print 'Accuracy: ', np.mean(yRetPred == ySorted)
+			end = start + len(yGnd);
+			#print yGnd
+			#ySorted  = np.append(ySorted, yGnd);
+			accuracy = np.mean(yRetPred[start:end] == yGnd);
+			print yRetPred[start:end]
+			#accuracy = np.mean(yRetPred == ySorted);
+			start = end;
+			#print accuracy
+
+			exit();
+			
+
+
+			if accuracy > best_acc[i]:
+				best_acc[i]       = accuracy; 
+				best_threshold[i] = lmax;
+				print lmax
+				print "hello"
+
+		
+	print best_threshold;
+	print best_acc;	
+	exit();
+
 
 		#print 'ysorted', np.mean(ySorted)
 
+		#print 'ySorted', ySorted.shape
+		#print 'Accuracy: ', np.mean(yRetPred == ySorted)
 
 	#print r;
 	#print result
