@@ -45,10 +45,6 @@ mat = scipy.io.loadmat(initialPath)
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
 
-print W1Mat.shape
-print W2Mat.shape
-exit()
-
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
 
@@ -199,7 +195,7 @@ with tf.Session() as session:
 
 	session.run(init);
 
-	for i in xrange(80):
+	for i in xrange(120):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
@@ -230,7 +226,7 @@ with tf.Session() as session:
 
 
 
-
+	# just a dummy this 
 	testData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
 	
 	predictions, e1Ret = session.run([scorePosNet, e1], 
@@ -246,8 +242,13 @@ with tf.Session() as session:
 	#print predictions
 	#print e1Ret
 
+	# max and min of predictions
+	# find best here
+	rmax = np.amax(predictions);
+	lmax = np.amin(predictions);
 
 	threshold = -0.0;
+
 
 	for i in xrange(20):
 		threshold = threshold + 0.1;
