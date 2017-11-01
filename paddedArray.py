@@ -101,8 +101,9 @@ W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # c
 W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
 W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
 W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));
+# b1 and u are extremely simple things
 b1_shape = [data.num_relations, 1, slice_size,];
-b1 = tf.Variable(tf.ones(shape=b1_shape, dtype = tf.float64));
+b1 = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64));
 U_shape = [data.num_relations, 1, slice_size,];
 U = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
