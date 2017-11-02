@@ -199,7 +199,7 @@ with tf.Session() as session:
 	print 'before session', memoryUsage()
 
 	session.run(init);
-	"""
+	
 	for i in xrange(120):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
@@ -228,86 +228,93 @@ with tf.Session() as session:
 						e3_holder        : e3Make,
 						pred			 : flip})
 			print costRet
-		"""
+		
 
 
 
 
-# just the accuracy reproduced please
-	# just a dummy this 
-	devData.e3  = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
-	
-	predictions, e1Ret = session.run([scorePosNet, e1], 
-	feed_dict={tree_holder: out,
-			treeLength_holder: lens, 
-			e1_holder        : devData.e1,
-			e2_holder        : devData.e2,
-			relation_holder  : devData.relations,
-			e3_holder        : devData.e3,
-			pred			 : True})
-	
-	predictions = np.ravel(predictions) # Jogar step
-	#print predictions
-	#print e1Ret
+		# just the accuracy reproduced please
+		# just a dummy this 
+		devData.e3  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
+		
+		predictions, e1Ret = session.run([scorePosNet, e1], 
+		feed_dict={tree_holder: out,
+				treeLength_holder: lens, 
+				e1_holder        : devData.e1,
+				e2_holder        : devData.e2,
+				relation_holder  : devData.relations,
+				e3_holder        : devData.e3,
+				pred			 : True})
+		
+		predictions = np.ravel(predictions) # Jogar step
+		#print predictions
+		#print e1Ret
 
-	# max and min of predictions
-	# find best here
-	rmax = np.amax(predictions);
-	lmax = np.amin(predictions);
+		# max and min of predictions
+		# find best here
+		rmax = np.amax(predictions);
+		lmax = np.amin(predictions);
 
-	print rmax
-	print lmax
+		#print rmax
 
-	
-
-
-
-	best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
-	best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
-
-	
-	
-	
-
-	while lmax <= rmax:
-
-		yRetPred = (predictions <= lmax);
-
-		ySet = np.array([True,False], dtype = np.bool)	# put in the false
+		best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
+		best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
+		ySet = np.array([True, False], dtype=np.bool)  # put in the false
 		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
 
-		start = 0;
-		ySorted = np.array([], dtype = np.bool)
-		for i in xrange(data.num_relations):
-			lst = (devData.relations == i);
-			yGnd = yGroundAll[lst];
+		while lmax <= rmax:
+			yRetPred = (predictions <= lmax);
+			start = 0;
+			for i in xrange(data.num_relations):
+				lst = (devData.relations == i);
+				yGnd = yGroundAll[lst];
 
+				end = start + len(yGnd);
+
+				accuracy = np.mean(yRetPred[start:end] == yGnd);
+				start = end;
+
+				if accuracy > best_acc[i]:
+					best_acc[i]       = accuracy; 
+					best_threshold[i] = lmax;
+
+			lmax = lmax + 0.01;
+
+
+			
+		#print best_threshold;
+		#print best_acc;	
+
+		# just a dummy this
+		testData.e3 = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+
+		predictions, e1Ret = session.run([scorePosNet, e1],
+										 feed_dict={tree_holder: out,
+													treeLength_holder: lens,
+													e1_holder: testData.e1,
+													e2_holder: testData.e2,
+													relation_holder: testData.relations,
+													e3_holder: testData.e3,
+													pred			: True})
+
+		predictions = np.ravel(predictions) # Jogar step
+		ySet = np.array([True, False], dtype=np.bool)  # put in the false
+		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+
+		testAccSum = 0.0;
+		start = 0;
+		for i in xrange(data.num_relations):
+			lst = (testData.relations == i);
+			yGnd = yGroundAll[lst];
+			yRetPred = (predictions <= best_threshold[i]);
 			end = start + len(yGnd);
 
-			accuracy = np.mean(yRetPred[start:end] == yGnd);
+			accuracySum = np.sum(yRetPred[start:end] == yGnd);
+			testAccSum = testAccSum + accuracySum;
 			start = end;
 
-			if accuracy > best_acc[i]:
-				best_acc[i]       = accuracy; 
-				best_threshold[i] = lmax;
-				print lmax
-				print "hello"
-
-		lmax = lmax + 0.01;
-
-
-		
-	print best_threshold;
-	print best_acc;	
-
-
-
-		#print 'ysorted', np.mean(ySorted)
-
-		#print 'ySorted', ySorted.shape
-		#print 'Accuracy: ', np.mean(yRetPred == ySorted)
-
-	#print r;
+		print 'test accuracy: ', (testAccSum / testRows)
+		#print r;
 	#print result
 	#print result.shape;
 	#print entVecRet.shape
