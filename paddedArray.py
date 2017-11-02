@@ -189,7 +189,7 @@ cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
 train_step = tf.contrib.opt.ScipyOptimizerInterface(
                 cost,
                 method='L-BFGS-B',
-                options={'maxiter': 50})
+                options={'maxiter': 1})
 
 
 init = tf.global_variables_initializer();
@@ -204,7 +204,7 @@ with tf.Session() as session:
 
 	session.run(init);
 	
-	for i in xrange(1):
+	for i in xrange(100):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
