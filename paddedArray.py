@@ -270,16 +270,12 @@ with tf.Session() as session:
 	
 
 	while lmax <= rmax:
-		
-		lmax = lmax + 0.01;
+
 		yRetPred = (predictions <= lmax);
-		#print 'yRetPred', yRetPred.shape
-		
+
 		ySet = np.array([True,False], dtype = np.bool)	# put in the false
 		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
 
-		#print yGroundAll
-		#print 'yGroundAll', yGroundAll.shape
 		start = 0;
 		ySorted = np.array([], dtype = np.bool)
 		for i in xrange(data.num_relations):
@@ -287,17 +283,9 @@ with tf.Session() as session:
 			yGnd = yGroundAll[lst];
 
 			end = start + len(yGnd);
-			#print yGnd
-			#ySorted  = np.append(ySorted, yGnd);
+
 			accuracy = np.mean(yRetPred[start:end] == yGnd);
-			print yRetPred[start:end]
-			#accuracy = np.mean(yRetPred == ySorted);
 			start = end;
-			#print accuracy
-
-			exit();
-			
-
 
 			if accuracy > best_acc[i]:
 				best_acc[i]       = accuracy; 
@@ -305,10 +293,13 @@ with tf.Session() as session:
 				print lmax
 				print "hello"
 
+		lmax = lmax + 0.01;
+
+
 		
 	print best_threshold;
 	print best_acc;	
-	exit();
+
 
 
 		#print 'ysorted', np.mean(ySorted)
