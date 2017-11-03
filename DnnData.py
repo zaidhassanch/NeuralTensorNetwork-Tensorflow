@@ -123,9 +123,8 @@ def dataGen(path, entityFile, dataFile, relationFile):
 
     e1 = np.asarray(e1);
     e2 = np.asarray(e2);
-    relationsFinal = np.asarray(relationsFinal);
 
-    
+    relationsFinal = np.asarray(relationsFinal);
 
     data = DnnData(e1, e2, relationsFinal, entity_list = entity_list, entity_length = entity_length, num_relations = relation_length);
 

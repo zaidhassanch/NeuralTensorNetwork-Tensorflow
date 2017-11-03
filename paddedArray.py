@@ -41,9 +41,15 @@ dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
 initialPath = '../data/' + dataSet + 'initialize.mat';
+lstE3Path = '../data/' + dataSet + 'lstE3.mat';
 mat = scipy.io.loadmat(initialPath)
+mat2 = scipy.io.loadmat(lstE3Path)
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
+e3Mat = np.squeeze(mat2['e3']) - 1;
+lstMat = np.squeeze(mat2['lst']) - 1;
+
+
 
 data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
 dataRows = len(data.e1)
@@ -184,8 +190,10 @@ for i in xrange(data.num_relations):		#
 
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
-cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
-train_op = tf.train.AdamOptimizer(1e-2).minimize(cost)
+loss = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
+#train_op = tf.train.AdamOptimizer(1e-2).minimize(loss)
+train_op = tf.train.MomentumOptimize( 1e-3, 0.9, use_nesterov=False).minimize(loss);
+
 """
 train_step = tf.contrib.opt.ScipyOptimizerInterface(
                 cost,
@@ -210,32 +218,37 @@ with tf.Session() as session:
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
 			#indexes = range(j*batch_size,(j+1)*batch_size)
-			indexes = np.random.random_integers(0,dataRows - 1,size = batch_size)
+			#indexes = np.random.random_integers(0,dataRows - 1,size = batch_size)
 			#print indexes.shape
-			relMake = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
-			e1Make  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
-			e2Make  = np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size))
-			e3Make  = np.random.randint(1, data.entity_length, size=(batch_size * corrupt_size))
+			relMake = np.ravel(np.matlib.repmat(data.relations[lstMat], 1, corrupt_size))
+			e1Make  = np.ravel(np.matlib.repmat(data.e1[lstMat], 1, corrupt_size))
+			e2Make  = np.ravel(np.matlib.repmat(data.e2[lstMat], 1, corrupt_size))
+			e3Make  = e3Mat;#np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
+			# this should not be starting from 1
 
-			
+
 			if (random.uniform(0, 1) > 0.5):
-				flip 	= True;
+				flip 	= False;
 			else:
 				flip 	= False;
 			
 			#flip 	= True;
-			feed_dict={tree_holder: out,
+			
+			lossRet, squareRet, _ = session.run([loss, squareSum, train_op], 
+				feed_dict={tree_holder: out,
 				treeLength_holder: lens, 
 				e1_holder        : e1Make,
 				e2_holder        : e2Make,
 				relation_holder  : relMake,
 				e3_holder        : e3Make,
-				pred			 : flip}
-			costRet, squareRet = session.run([cost, squareSum], feed_dict); 
+				pred			 : flip}); 
 
 			#train_step.minimize(session, feed_dict)
 			#costRet = cost.eval(feed_dict = feed_dict);
-			print costRet
+			print lossRet;
+
+
+
 
 		# just the accuracy reproduced please
 		# just a dummy this 
