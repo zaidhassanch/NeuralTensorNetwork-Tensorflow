@@ -41,13 +41,13 @@ dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
 initialPath = '../data/' + dataSet + 'initialize.mat';
-lstE3Path = '../data/' + dataSet + 'lstE3.mat';
+#lstE3Path = '../data/' + dataSet + 'lstE3.mat';
 mat = scipy.io.loadmat(initialPath)
-mat2 = scipy.io.loadmat(lstE3Path)
+#mat2 = scipy.io.loadmat(lstE3Path)
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
-e3Mat = np.squeeze(mat2['e3']) - 1;
-lstMat = np.squeeze(mat2['lst']) - 1;
+#e3Mat = np.squeeze(mat2['e3']) - 1;
+#lstMat = np.squeeze(mat2['lst']) - 1;
 
 
 
@@ -228,7 +228,7 @@ with tf.Session() as session:
 
 
 			if (random.uniform(0, 1) > 0.5):
-				flip 	= False;
+				flip 	= True;
 			else:
 				flip 	= False;
 			
