@@ -185,12 +185,13 @@ for i in xrange(data.num_relations):		#
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
-#train_op = tf.train.AdamOptimizer(1e-4).minimize(cost)
+train_op = tf.train.AdamOptimizer(1e-1).minimize(cost)
+"""
 train_step = tf.contrib.opt.ScipyOptimizerInterface(
                 cost,
                 method='L-BFGS-B',
-                options={'maxiter': 10})
-
+                options={'maxiter': 5})
+"""
 
 init = tf.global_variables_initializer();
 
@@ -223,16 +224,17 @@ with tf.Session() as session:
 				flip 	= False;
 			
 			#flip 	= True;
-			#costRet, squareRet = session.run([cost, squareSum],) 
 			feed_dict={tree_holder: out,
-					treeLength_holder: lens, 
-					e1_holder        : e1Make,
-					e2_holder        : e2Make,
-					relation_holder  : relMake,
-					e3_holder        : e3Make,
-					pred			 : flip}
-			train_step.minimize(session, feed_dict)
-			costRet = cost.eval(feed_dict = feed_dict);
+				treeLength_holder: lens, 
+				e1_holder        : e1Make,
+				e2_holder        : e2Make,
+				relation_holder  : relMake,
+				e3_holder        : e3Make,
+				pred			 : flip}
+			costRet, squareRet = session.run([cost, squareSum], feed_dict); 
+
+			#train_step.minimize(session, feed_dict)
+			#costRet = cost.eval(feed_dict = feed_dict);
 			print costRet
 
 		# just the accuracy reproduced please
