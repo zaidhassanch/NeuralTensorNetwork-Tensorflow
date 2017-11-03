@@ -192,7 +192,8 @@ squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.red
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 loss = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
 #train_op = tf.train.AdamOptimizer(1e-2).minimize(loss)
-train_op = tf.train.MomentumOptimizer( 5e-5, 0.3, use_nesterov=False).minimize(loss);
+#train_op = tf.train.MomentumOptimizer( 5e-5, 0.3, use_nesterov=False).minimize(loss);
+train_op = tf.train.AdadeltaOptimizer().minimize(loss);
 
 """
 train_step = tf.contrib.opt.ScipyOptimizerInterface(
