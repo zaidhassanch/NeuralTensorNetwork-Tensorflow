@@ -185,7 +185,7 @@ for i in xrange(data.num_relations):		#
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 cost = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
-train_op = tf.train.AdamOptimizer(1e-1).minimize(cost)
+train_op = tf.train.AdamOptimizer(1e-2).minimize(cost)
 """
 train_step = tf.contrib.opt.ScipyOptimizerInterface(
                 cost,
