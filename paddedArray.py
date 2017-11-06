@@ -238,7 +238,7 @@ with tf.Session() as session:
 			if (random.uniform(0, 1) > 0.5):
 				flip 	= False;
 			else:
-				flip 	= False;
+				flip 	= True;
 			
 			#flip 	= True;
 			
