@@ -41,13 +41,13 @@ dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
 initialPath = '../data/' + dataSet + 'initialize.mat';
-#lstE3Path = '../data/' + dataSet + 'lstE3.mat';
+lstE3Path = '../data/' + dataSet + 'lstE3.mat';
 mat = scipy.io.loadmat(initialPath)
-#mat2 = scipy.io.loadmat(lstE3Path)
+mat2 = scipy.io.loadmat(lstE3Path)
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
-#e3Mat = np.squeeze(mat2['e3']) - 1;
-#lstMat = np.squeeze(mat2['lst']) - 1;
+e3Mat = np.squeeze(mat2['e3']) - 1;
+lstMat = np.squeeze(mat2['lst']) - 1;
 
 
 
@@ -177,7 +177,7 @@ for i in xrange(data.num_relations):		#
 	score_pos		   = tf.matmul(z_pos, UtransposeSpecific);
 	score_neg		   = tf.matmul(z_neg, UtransposeSpecific);
 
-	scorePosNet = tf.concat([scorePosNet, score_pos], 0);
+	scorePosNet = tf.concat([scorePosNet, score_pos], 0);	# unneccesary and ditchable: debugging
 
 	bias = tf.constant(1, dtype = tf.float64);
 
@@ -185,13 +185,19 @@ for i in xrange(data.num_relations):		#
 	indxJogar = tf.gather(tf.transpose(indx), 0);
 	scorePosRel = tf.gather(score_pos, tf.transpose(indxJogar));
 	scoreNegRel = tf.gather(score_neg, tf.transpose(indxJogar));
+	partCost = tf.reduce_sum((scorePosRel + bias) - scoreNegRel);
+	grads = tf.gradients(partCost, W1specificTranspose);
 
-	cost = cost + tf.reduce_sum((scorePosRel + bias) - scoreNegRel);
+	cost = cost + partCost;
 
 squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
 squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 loss = tf.divide(cost,batchSize) + reg_param / 2.0 * squareSum ;
-train_op = tf.train.AdamOptimizer(4e-5).minimize(loss)
+
+#optimizer = tf.train.GradientDescentOptimizer(1e-5)
+#grads_and_vars = optimizer.compute_gradients(loss, [scoreNegRel])
+#grads = tf.train.AdamOptimizer(1e-4).compute_gradients(loss)
+#train_op = tf.train.AdamOptimizer(1e-4).minimize(loss)	# NEVER RAN FOR THIS VAL
 #train_op = tf.train.MomentumOptimizer( 5e-5, 0.3, use_nesterov=False).minimize(loss);
 #train_op = tf.train.AdadeltaOptimizer(learning_rate=1.0).minimize(loss);
 
@@ -219,23 +225,24 @@ with tf.Session() as session:
 		batches = dataRows // batch_size;
 		for j in xrange(batches):
 			#indexes = range(j*batch_size,(j+1)*batch_size)
-			indexes = np.random.randint(0,dataRows,size = batch_size)
+			#indexes = np.random.randint(0,dataRows,size = batch_size)
 			#print indexes.shape
-			relMake = np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size))
-			e1Make  = np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size))
-			e2Make  = np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size))
-			e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
+			relMake = np.ravel(np.matlib.repmat(data.relations[lstMat], 1, corrupt_size))
+			e1Make  = np.ravel(np.matlib.repmat(data.e1[lstMat], 1, corrupt_size))
+			e2Make  = np.ravel(np.matlib.repmat(data.e2[lstMat], 1, corrupt_size))
+			#e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
+			e3Make = e3Mat;
 			# this should not be starting from 1
 
 
 			if (random.uniform(0, 1) > 0.5):
-				flip 	= True;
+				flip 	= False;
 			else:
 				flip 	= False;
 			
 			#flip 	= True;
 			
-			lossRet, squareRet, _ = session.run([loss, squareSum, train_op], 
+			lossRet, squareRet, gradRet = session.run([loss, squareSum, grads], 
 				feed_dict={tree_holder: out,
 				treeLength_holder: lens, 
 				e1_holder        : e1Make,
@@ -247,7 +254,11 @@ with tf.Session() as session:
 			#train_step.minimize(session, feed_dict)
 			#costRet = cost.eval(feed_dict = feed_dict);
 			print lossRet;
-
+			#print gradRet;
+			#gradRet = np.array(gradRet[0]);
+			#print gradRet.shape;
+			#print gradRet[0,0,:];
+			#exit();
 
 
 
