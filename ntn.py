@@ -64,7 +64,7 @@ class NTN():
         return a
 
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
-        
+
         data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
 
         if(indexes == ""):
@@ -206,13 +206,13 @@ class NTN():
         gradsU  = tf.gradients(loss, U);
         train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)  
 
-        return gradsEntVec, gradsE,scorePosNet, e1;
+        return gradsEntVec, gradsE,scorePosNet, e1, train_op;
 
 
     def buildGraph(self):
-        gradsEntVec, gradsE,scorePosNet, e1 = self.makeComputeGraph()
+        gradsEntVec, gradsE,scorePosNet, e1, train_op = self.makeComputeGraph()
         
-        return gradsEntVec, gradsE,scorePosNet, e1
+        return gradsEntVec, gradsE,scorePosNet, e1, train_op
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 

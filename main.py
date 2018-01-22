@@ -117,7 +117,7 @@ print E_matrix.dtype
 print memoryUsage()
 
 ntnNetwork          = NTN(E_matrix, data);
-gradsEntVec, gradsE,scorePosNet, e1 = ntnNetwork.buildGraph();
+gradsEntVec, gradsE,scorePosNet, e1, train_op = ntnNetwork.buildGraph();
 
 
 init = tf.global_variables_initializer();
@@ -157,7 +157,7 @@ with tf.Session() as session:
 			#flip 	= True;
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
-			geVec, gE = session.run([gradsEntVec, gradsE] , feeddict_new);	# first Neg is wrong
+			geVec, gE, _ = session.run([gradsEntVec, gradsE, train_op] , feeddict_new);	# first Neg is wrong
 			"""
 			#print lossRet;
 			geVec = np.array(geVec[0])
