@@ -150,24 +150,21 @@ with tf.Session() as session:
 			#indexes = range(j*batch_size,(j+1)*batch_size)
 			#indexes = np.random.randint(0,dataRows,size = batch_size)
 			#print indexes.shape
-			dataIn['relMake'] = np.ravel(np.matlib.repmat(data.relations[lstMat], 1, corrupt_size))
-			dataIn['e1Make']  = np.ravel(np.matlib.repmat(data.e1[lstMat], 1, corrupt_size))
-			dataIn['e2Make']  = np.ravel(np.matlib.repmat(data.e2[lstMat], 1, corrupt_size))
-			#e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
-			dataIn['e3Make'] = e3Mat;
+		
+			data.e3Make = e3Mat;
 			# this should not be starting from 1
 
 
 			if (random.uniform(0, 1) > 0.5):
-				dataIn['flip'] 	= False;
+				data.flip 	= False;
 			else:
-				dataIn['flip'] 	= False;
-			dataIn['lens'] = lens;
-			dataIn['out']  = out;
+				data.flip 	= False;
+			data.lens = lens;
+			data.out  = out;
 			
 			#flip 	= True;
         
-			feeddict_new = ntnNetwork.makeFeedDict(dataIn);
+			feeddict_new = ntnNetwork.makeFeedDict(data, lstMat);
 			geVec, gE = session.run([gradsEntVec, gradsE] , feeddict_new);	# first Neg is wrong
 			
 			#print lossRet;
@@ -182,56 +179,6 @@ with tf.Session() as session:
 			print ans;
 			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
 			print ans;
-
-			"""
-			gW1 = np.array(gW1[0]);
-			ans = np.amax(np.absolute(gradW1mat - gW1));
-			print gW1.shape;
-			print gradW1mat[0,0,0:4,0:4];
-			print gW1[0,0,0:4,0:4];
-			print ans;
-
-
-			gU = np.array(gU[0]);
-			gU = np.squeeze(gU);
-			ans = np.amax(np.absolute(gradUmat - gU));
-			print gradUmat.shape;
-			print gU.shape;
-			print gU;
-			print gradUmat;
-			print ans;
-			gb1 = np.array(gb1[0]);
-			gb1 = np.squeeze(gb1);
-			ans = np.amax(np.absolute(gradb1mat - gb1));
-			print gb1.shape;
-			print gradb1mat.shape;
-			print gradb1mat;
-			print gb1;
-			print ans;
-			gW2 = np.array(gW2[0]);
-			ans = np.amax(np.absolute(gradW2mat - gW2));
-			print gW2.shape;
-			print gradW2mat[0,0:4,0:4];
-			print gW2[0,0:4,0:4];
-			print ans;
-			gE = np.array(gE[0]);
-			gE = gE[:,1:];
-			ansMat = np.absolute(gradEmat - gE);
-			indx =  nanargmax(ansMat);
-			print indx;
-			print gradEmat[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1] + 2)];
-			print "";
-			print gE[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1]+ 2)];
-			print "";
-			print ansMat[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1]+ 2)];
-			print "";
-			print ansMat[indx[0], indx[1]];
-			print gE.shape;
-			print gradEmat.shape;		
-
-			exit();
-			"""
-
 
 			exit()
 

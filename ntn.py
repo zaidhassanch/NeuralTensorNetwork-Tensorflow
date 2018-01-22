@@ -63,26 +63,27 @@ class NTN():
         a = np.mean(y == yret)
         return a
 
-    def makeFeedDict(self, dnnData, indexes = ""):
+    def makeFeedDict(self, data, indexes = ""):
+        #e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
         if(indexes == ""):
             feeddict = {
-                self.e1_holder        :  dnnData['e1Make'],
-                self.relation_holder  :  dnnData['relMake'], 
-                self.e2_holder        :  dnnData['e2Make'],
-                self.e3_holder        :  dnnData['e3Make'],
-                self.treeLength_holder:  dnnData['lens'], 
-                self.tree_holder      :  dnnData['out'],
-                self.pred             :  dnnData['flip']
+                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size)),
+                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size)), 
+                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size)),
+                self.e3_holder        :  data.e3Make,
+                self.treeLength_holder:  data.lens, 
+                self.tree_holder      :  data.out,
+                self.pred             :  data.flip
             }
         else:
             feeddict = {
-                self.e1_holder        :  dnnData['e1Make'][indexes],
-                self.relation_holder  :  dnnData['relMake'][indexes], 
-                self.e2_holder        :  dnnData['e2Make'][indexes],
-                self.e3_holder        :  dnnData['e3Make'][indexes],
-                self.treeLength_holder:  dnnData['lens'], 
-                self.tree_holder      :  dnnData['out'],
-                self.pred             :  dnnData['flip']
+                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size)),
+                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size)), 
+                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size)),
+                self.e3_holder        :  data.e3Make,
+                self.treeLength_holder:  data.lens, 
+                self.tree_holder      :  data.out,
+                self.pred             :  data.flip
             }
         return feeddict;
 
