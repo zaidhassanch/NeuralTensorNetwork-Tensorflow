@@ -63,13 +63,15 @@ class NTN():
         a = np.mean(y == yret)
         return a
 
-    def makeFeedDict(self, data, indexes = ""):
-        #e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
+    def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
+        
+        data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
+
         if(indexes == ""):
             feeddict = {
-                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size)),
-                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size)), 
-                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size)),
+                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1, 1, corrupt_size)),
+                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations, 1, corrupt_size)), 
+                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2, 1, corrupt_size)),
                 self.e3_holder        :  data.e3Make,
                 self.treeLength_holder:  data.lens, 
                 self.tree_holder      :  data.out,
@@ -204,13 +206,13 @@ class NTN():
         gradsU  = tf.gradients(loss, U);
         train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)  
 
-        return gradsEntVec, gradsE
+        return gradsEntVec, gradsE,scorePosNet, e1;
 
 
     def buildGraph(self):
-        gradsE = self.makeComputeGraph()
+        gradsEntVec, gradsE,scorePosNet, e1 = self.makeComputeGraph()
         
-        return gradsE
+        return gradsEntVec, gradsE,scorePosNet, e1
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 

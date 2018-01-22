@@ -52,21 +52,25 @@ dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
 initialPath = '../data/' + dataSet + 'initialize.mat';
+"""
 valuesPath = '../data/' + dataSet + 'regValues.mat';
 lstE3Path = '../data/' + dataSet + 'lstE3.mat';
 forwardValsPath = '../data/' + dataSet + 'forwardValues.mat';
 specificValsPath = '../data/' + dataSet + 'specificValues.mat';
 outputValsPath = '../data/' + dataSet + 'outputValues_orig.mat';
-
+"""
 mat       = scipy.io.loadmat(initialPath);
+"""
 valuesMat = scipy.io.loadmat(valuesPath);
 mat2 = scipy.io.loadmat(lstE3Path);
 forwardMat = scipy.io.loadmat(forwardValsPath);
 specificMat = scipy.io.loadmat(specificValsPath);
+"""
 
 
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
+"""
 gradW1mat = valuesMat['gradW1mat'];
 gradW2mat = valuesMat['gradW2mat'];
 gradb1mat = valuesMat['gradb1mat'];
@@ -74,11 +78,12 @@ gradUmat = valuesMat['gradUmat'];
 gradEmat = valuesMat['gradE'];
 gradEntmat = valuesMat['entVecGrad'];
 gradSpecMat = specificMat['entVecGrad_specific'];
+"""
 
-e3Mat = np.squeeze(mat2['e3']) - 1;
-lstMat = np.squeeze(mat2['lst']) - 1;
-scorePosMat = forwardMat['score_pos'];
-scoreNegMat = forwardMat['score_neg'];
+#e3Mat = np.squeeze(mat2['e3']) - 1;
+#lstMat = np.squeeze(mat2['lst']) - 1;
+#scorePosMat = forwardMat['score_pos'];
+#scoreNegMat = forwardMat['score_neg'];
 
 with open('DnnData_data.pkl', 'rb') as inputFile:
     data = pickle.load(inputFile)
@@ -95,8 +100,6 @@ with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtra
     tree = list(rows);
     print(tree[0])
 
-
-
 lens = np.array([len(i) for i in tree])
 print lens.shape
 mask = np.arange(lens.max()) < lens[:,None]
@@ -107,24 +110,14 @@ out[mask] = np.concatenate(tree)
 E_matrix = np.zeros(shape = (100, 67448)); 	# As opposed to zeros to ensure error warning
 matVars = loadmat(dataPath + 'initEmbed.mat');
 word_embeds = matVars['We'];
-
 print 'square ', np.sum(np.square(word_embeds))
-
-#rint word_embeds[:, [0]]
-
-#print word_embeds.shape
 E_matrix[:,1:] = word_embeds
 print 'square ', np.sum(np.square(E_matrix))
 print E_matrix.dtype
-#print E_matrix
-
 print memoryUsage()
 
-
-
-
 ntnNetwork          = NTN(E_matrix, data);
-gradsEntVec, gradsE = ntnNetwork.buildGraph();
+gradsEntVec, gradsE,scorePosNet, e1 = ntnNetwork.buildGraph();
 
 
 init = tf.global_variables_initializer();
@@ -148,10 +141,9 @@ with tf.Session() as session:
 		for j in xrange(5):
 			
 			#indexes = range(j*batch_size,(j+1)*batch_size)
-			#indexes = np.random.randint(0,dataRows,size = batch_size)
-			#print indexes.shape
-		
-			data.e3Make = e3Mat;
+			indexes = np.random.randint(0,dataRows,size = batch_size)
+			#print indexes.shape		
+			#data.e3Make = e3Mat; Or inside
 			# this should not be starting from 1
 
 
@@ -164,9 +156,9 @@ with tf.Session() as session:
 			
 			#flip 	= True;
         
-			feeddict_new = ntnNetwork.makeFeedDict(data, lstMat);
+			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
 			geVec, gE = session.run([gradsEntVec, gradsE] , feeddict_new);	# first Neg is wrong
-			
+			"""
 			#print lossRet;
 			geVec = np.array(geVec[0])
 			
@@ -179,25 +171,17 @@ with tf.Session() as session:
 			print ans;
 			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
 			print ans;
-
-			exit()
-
-			
-
-		
+			"""
 
 		# just the accuracy reproduced please
 		# just a dummy this 
-		devData.e3  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
-		
-		predictions, e1Ret = session.run([scorePosNet, e1], 
-		feed_dict={tree_holder: out,
-				treeLength_holder: lens, 
-				e1_holder        : devData.e1,
-				e2_holder        : devData.e2,
-				relation_holder  : devData.relations,
-				e3_holder        : devData.e3,
-				pred			 : True})
+		devData.e3Make  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
+		devData.out = out;
+		devData.lens = lens;
+		devData.flip = True;
+		feeddict_new = ntnNetwork.makeFeedDict(devData);
+
+		predictions, e1Ret = session.run([scorePosNet, e1], feeddict_new)
 		
 		predictions = np.ravel(predictions) # Jogar step
 		#print predictions
@@ -233,22 +217,14 @@ with tf.Session() as session:
 
 			lmax = lmax + 0.01;
 
-		
-			
-		#print best_threshold;
-		#print best_acc;	
-
 		# just a dummy this
-		testData.e3 = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+		testData.e3Make = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+		testData.out = out;
+		testData.lens = lens;
+		testData.flip = True;
+		feeddict_new = ntnNetwork.makeFeedDict(testData);
 
-		predictions, e1Ret = session.run([scorePosNet, e1],
-										 feed_dict={tree_holder: out,
-													treeLength_holder: lens,
-													e1_holder: testData.e1,
-													e2_holder: testData.e2,
-													relation_holder: testData.relations,
-													e3_holder: testData.e3,
-													pred			: True})
+		predictions, e1Ret = session.run([scorePosNet, e1],feeddict_new);
 
 		predictions = np.ravel(predictions) # Jogar step
 		ySet = np.array([True, False], dtype=np.bool)  # put in the false
@@ -257,7 +233,7 @@ with tf.Session() as session:
 		testAccSum = 0.0;
 		start = 0;
 		yGndSorted = np.zeros(predictions.shape);
-		print 'yREt', yRetPred.shape
+		#print 'yREt', yRetPred.shape
 		for i in xrange(data.num_relations):
 			lst = (testData.relations == i);
 			yGnd = yGroundAll[lst];
@@ -273,16 +249,4 @@ with tf.Session() as session:
 		if (testAccuracy > bestAccuracy):
 			bestAccuracy = testAccuracy;
 		print 'best accuracy: ', bestAccuracy;
-
-		precision = metrics.precision_score(yGndSorted, yRetPred);
-		print 'precision: ', precision;
-
-		#print r;
-	#print result
-	#print result.shape;
-	#print entVecRet.shape
-
-	#print entVecRet[38693]
-	#print aRet
-	#print concatRet
-
+		exit()
