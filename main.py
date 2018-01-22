@@ -249,4 +249,4 @@ with tf.Session() as session:
 		if (testAccuracy > bestAccuracy):
 			bestAccuracy = testAccuracy;
 		print 'best accuracy: ', bestAccuracy;
-		exit()
+		
