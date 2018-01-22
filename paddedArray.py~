@@ -1,0 +1,525 @@
+from sklearn import metrics
+import numpy as np 
+import DnnData
+import csv
+import math
+import tensorflow as tf
+from scipy.io import loadmat
+import os
+import psutil
+import DnnData
+import random
+import scipy.io
+import pickle
+
+embedding_size = 100;
+slice_size = 3;
+no_of_entities = 38696;
+flipType = 0;
+batch_size = 20000;
+
+def nanargmax(a):
+    idx = np.argmax(a, axis=None)
+    multi_idx = np.unravel_index(idx, a.shape)
+    if np.isnan(a[multi_idx]):
+        nan_count = np.sum(np.isnan(a))
+        # In numpy < 1.8 use idx = np.argsort(a, axis=None)[-nan_count-1]
+        idx = np.argpartition(a, -nan_count-1, axis=None)[-nan_count-1]
+        multi_idx = np.unravel_index(idx, a.shape)
+    return multi_idx
+
+def memoryUsage():
+	pid = os.getpid()
+	py = psutil.Process(pid)
+	memoryUse = py.memory_info()[0]/1e6;  # memory use in GB...I think
+	print('==> memory use:', memoryUse)
+
+
+print "Starting DNN Network ..."
+
+embedding_size = 100;
+slice_size   = 3;
+corrupt_size = 10;
+
+
+# tree ids is going to be used
+# initEmbed's We is going to be used
+# how are the words going to get used
+# how are the text files going to be read
+
+
+dataSet  = 'Wordnet/'
+dataPath = '../data/' + dataSet;
+savePath = '../output/'
+initialPath = '../data/' + dataSet + 'initialize.mat';
+valuesPath = '../data/' + dataSet + 'regValues.mat';
+lstE3Path = '../data/' + dataSet + 'lstE3.mat';
+forwardValsPath = '../data/' + dataSet + 'forwardValues.mat';
+specificValsPath = '../data/' + dataSet + 'specificValues.mat';
+outputValsPath = '../data/' + dataSet + 'outputValues_orig.mat';
+
+mat       = scipy.io.loadmat(initialPath);
+valuesMat = scipy.io.loadmat(valuesPath);
+mat2 = scipy.io.loadmat(lstE3Path);
+forwardMat = scipy.io.loadmat(forwardValsPath);
+specificMat = scipy.io.loadmat(specificValsPath);
+
+W1Mat = mat['W1Mat'];
+W2Mat = mat['W2Mat'];
+gradW1mat = valuesMat['gradW1mat'];
+gradW2mat = valuesMat['gradW2mat'];
+gradb1mat = valuesMat['gradb1mat'];
+gradUmat = valuesMat['gradUmat'];
+gradEmat = valuesMat['gradE'];
+gradEntmat = valuesMat['entVecGrad'];
+gradSpecMat = specificMat['entVecGrad_specific'];
+
+e3Mat = np.squeeze(mat2['e3']) - 1;
+lstMat = np.squeeze(mat2['lst']) - 1;
+scorePosMat = forwardMat['score_pos'];
+scoreNegMat = forwardMat['score_neg'];
+
+with open('DnnData_data.pkl', 'rb') as inputFile:
+    data = pickle.load(inputFile)
+    testData = pickle.load(inputFile)
+    devData = pickle.load(inputFile)
+
+dataRows = len(data.e1)
+testRows = len(testData.e1)
+devRows = len(devData.e1)
+
+
+with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
+    rows = csv.reader(csvfile)
+    tree = list(rows);
+    print(tree[0])
+
+
+
+lens = np.array([len(i) for i in tree])
+print lens.shape
+mask = np.arange(lens.max()) < lens[:,None]
+out = np.zeros(mask.shape, dtype= np.int)
+out[mask] = np.concatenate(tree)
+#print out
+
+E_matrix = np.zeros(shape = (100, 67448)); 	# As opposed to zeros to ensure error warning
+matVars = loadmat(dataPath + 'initEmbed.mat');
+word_embeds = matVars['We'];
+
+print 'square ', np.sum(np.square(word_embeds))
+
+#rint word_embeds[:, [0]]
+
+#print word_embeds.shape
+E_matrix[:,1:] = word_embeds
+print 'square ', np.sum(np.square(E_matrix))
+print E_matrix.dtype
+#print E_matrix
+
+print memoryUsage()
+
+
+def update_x_2(inputVar):
+	return inputVar
+
+
+
+
+tree_holder       = tf.placeholder(tf.int32,   [no_of_entities,None]);
+treeLength_holder = tf.placeholder(tf.float64, [no_of_entities,]);
+#E_holder          = tf.placeholder(tf.float64, [embedding_size,67448]);		# use initial value stuff
+e1_holder         = tf.placeholder(tf.int32,   [None,]);
+e2_holder         = tf.placeholder(tf.int32,   [None,]);
+relation_holder   = tf.placeholder(tf.int32,   [None,]);
+e3_holder         = tf.placeholder(tf.int32,   [None,]);	# change above too
+pred = tf.placeholder(tf.bool, shape=[])
+
+E_Var = tf.Variable(dtype=tf.float64, initial_value=E_matrix,trainable=True)
+
+with tf.control_dependencies([E_Var[:,0].assign(tf.zeros([100,], dtype = tf.float64))]):
+	E_Var = tf.identity(E_Var);
+
+#W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
+#W1 = tf.Variable(tf.ones(shape=W1_shape, dtype = tf.float64)); #trun
+#W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size)); #trun
+W1 = tf.Variable(dtype=tf.float64, initial_value= W1Mat,trainable=True)
+#W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
+#W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
+#W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));	#randuni
+W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
+# b1 and u are extremely simple things
+b1_shape = [data.num_relations, 1, slice_size,];
+b1       = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64));	# grad of this var is awkward
+U_shape  = [data.num_relations, 1, slice_size,];		# U shape is different
+U        = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
+
+cost        = tf.Variable(0, dtype = tf.float64)
+scorePosNet = tf.Variable(tf.zeros(shape = [0,1], dtype = tf.float64));
+batchSize   = tf.constant(batch_size, dtype = tf.float64)
+reg_param   = tf.constant(0.0001, dtype = tf.float64)
+#x2 = tf.Variable([5])
+treeLengths = tf.reshape(treeLength_holder, [no_of_entities,1]);
+Emat = tf.transpose(E_Var);
+collectedVectors = tf.gather(Emat, tree_holder);
+sumVecs = tf.reduce_sum(collectedVectors, axis = 1);
+entVec1 = tf.divide(sumVecs,treeLengths);
+entVec = entVec1;
+
+# look to eliminate
+for i in xrange(data.num_relations):		#
+
+	lst = tf.where(tf.equal(relation_holder, i))
+	e1 = tf.gather(e1_holder,lst);
+	e2 = tf.gather(e2_holder,lst);
+	e3 = tf.gather(e3_holder,lst);
+	entVecE1 = tf.squeeze(tf.gather(entVec,e1));
+	entVecE2 = tf.squeeze(tf.gather(entVec,e2));
+	entVecE3 = tf.squeeze(tf.gather(entVec,e3));
+	#entVecE1N = tf.Variable(tf.zeros(shape = entVecE1.get_shape()));
+
+	entVecE1Neg = tf.cond(pred, lambda: update_x_2(entVecE1), lambda: update_x_2(entVecE3))
+	entVecE2Neg = tf.cond(pred, lambda: update_x_2(entVecE3), lambda: update_x_2(entVecE2))
+
+	W1transpose = tf.transpose(W1, perm=[3,2,0, 1]);
+	# restrict yourself to special i
+	W1specificTranspose = tf.gather(W1transpose,i);
+
+	firstBi = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2), axes = [[2], [0]]);
+	firstBiNeg = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2Neg), axes = [[2], [0]]);
+	secondB = tf.multiply(tf.transpose(entVecE1), firstBi);
+	secondBNeg = tf.multiply(tf.transpose(entVecE1Neg), firstBiNeg);
+	finalBi = tf.reduce_sum(secondB , 1);
+	finalBiNeg = tf.reduce_sum(secondBNeg , 1);
+
+	W2specific = W2[i,:,:];
+	b1specific = b1[i,:,:];
+	concatEntVecs    = tf.concat([entVecE1, entVecE2], 1);
+	concatEntNegVecs = tf.concat([entVecE1Neg, entVecE2Neg], 1);
+	simpleProd    = tf.add(tf.matmul(concatEntVecs, W2specific), b1specific);
+	simpleNegProd = tf.add(tf.matmul(concatEntNegVecs, W2specific), b1specific);
+
+	v_pos = simpleProd      + tf.transpose(finalBi);
+	v_neg = simpleNegProd   + tf.transpose(finalBiNeg);
+	z_pos = tf.tanh(v_pos);
+	z_neg = tf.tanh(v_neg);
+
+	UtransposeSpecific = tf.transpose(U[i,:,:]);
+	score_pos		   = tf.matmul(z_pos, UtransposeSpecific);
+	score_neg		   = tf.matmul(z_neg, UtransposeSpecific);
+
+	bias = tf.constant(1, dtype = tf.float64);
+
+	indx = tf.where(tf.greater(score_pos + bias, score_neg))
+	indxJogar = tf.gather(tf.transpose(indx), 0);
+	scorePosRel = tf.gather(score_pos, tf.transpose(indxJogar));
+	scoreNegRel = tf.gather(score_neg, tf.transpose(indxJogar));
+	partCost = tf.reduce_sum((scorePosRel + bias) - scoreNegRel);
+	grads1 = tf.gradients(partCost, UtransposeSpecific);
+
+	scorePosNet =  tf.concat([scorePosNet, score_pos], 0);	# required for test part
+
+	cost = cost + partCost;
+
+squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
+squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
+
+loss = tf.divide(cost,batchSize) #+ reg_param / 2.0 * squareSum;	# This division probably results in div
+																	# of gradients
+gradsE  = tf.gradients(loss, E_Var);
+gradsEmat  = tf.gradients(loss, Emat);
+gradsEntVec  = tf.gradients(loss, sumVecs);
+gradsW1 = tf.gradients(loss, W1);
+gradsW2 = tf.gradients(loss, W2);
+gradsB1 = tf.gradients(loss, b1);
+gradsU  = tf.gradients(loss, U);
+#optimizer = tf.train.GradientDescentOptimizer(1e-5)
+#grads_and_vars = optimizer.compute_gradients(loss, [scoreNegRel])
+#grads = tf.train.AdamOptimizer(1e-4).compute_gradients(loss)
+train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)	
+#train_op = tf.train.MomentumOptimizer( 5e-5, 0.3, use_nesterov=False).minimize(loss);
+#train_op = tf.train.AdadeltaOptimizer(learning_rate=1.0).minimize(loss);
+
+"""
+train_step = tf.contrib.opt.ScipyOptimizerInterface(
+                cost,
+                method='L-BFGS-B',
+                options={'maxiter': 5})
+"""
+
+init = tf.global_variables_initializer();
+
+
+print 'first loop', memoryUsage();
+
+
+
+with tf.Session() as session:
+	print 'before session', memoryUsage()
+
+	session.run(init);
+	bestAccuracy = 0.0;
+		
+	for i in xrange(200):
+		print 'iter:', i;
+		batches = dataRows // batch_size;
+		
+		for j in xrange(5):
+		
+			#indexes = range(j*batch_size,(j+1)*batch_size)
+			#indexes = np.random.randint(0,dataRows,size = batch_size)
+			#print indexes.shape
+			relMake = np.ravel(np.matlib.repmat(data.relations[lstMat], 1, corrupt_size))
+			e1Make  = np.ravel(np.matlib.repmat(data.e1[lstMat], 1, corrupt_size))
+			e2Make  = np.ravel(np.matlib.repmat(data.e2[lstMat], 1, corrupt_size))
+			#e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size))
+			e3Make = e3Mat;
+			# this should not be starting from 1
+
+
+			if (random.uniform(0, 1) > 0.5):
+				flip 	= False;
+			else:
+				flip 	= False;
+			
+			#flip 	= True;
+			
+			indxJogarRet, geMat, geVec, gE = session.run([indxJogar, gradsEmat, gradsEntVec, gradsE],
+				feed_dict={tree_holder: out,
+				treeLength_holder: lens, 
+				e1_holder        : e1Make,
+				e2_holder        : e2Make,
+				relation_holder  : relMake,
+				e3_holder        : e3Make,
+				pred			 : flip});	# first Neg is wrong
+			
+			#print lossRet;
+			geVec = np.array(geVec[0])
+
+			#print zPosRet.shape;
+			gE = np.array(gE[0]);
+			geMat = np.array(geMat[0]);
+			print gE.shape;
+			print gradEmat.shape;
+			print geMat[0].shape;
+			print geMat[1].shape;
+
+			add_vec2 = np.where(geMat[1] == 50004)[0];
+
+			print geMat[2].shape;
+
+			geaddVec2 = geMat[0][add_vec2, :];
+			print geaddVec2.shape;
+			print gradSpecMat.shape;
+			a={};
+			a['indexMat']=out;
+			a['entityVecGrad']=geVec;
+			a['wordVecGrad']=gE;
+			outputMat = scipy.io.savemat(outputValsPath, a);
+			print geVec.shape;
+			ans = np.amax(np.absolute(np.transpose(geVec) - gradEntmat));
+			print ans;
+			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
+			print ans;
+
+
+
+			exit()
+
+
+			a2 =  geaddVec2[:, 50:53];
+
+			print add_vec2;
+			print add_vec2.shape;
+			print 'a2 shape', a2.shape;
+			a2 = np.random.permutation(a2);
+			print 'a2 shape', a2.shape;
+			a2 = np.sum(a2, axis = 0);
+			print np.transpose(gradEmat[50:53,50003]);
+			print a2;
+
+			diff = np.transpose(gradEmat[50:53, 50003]) - a2;
+			print diff;
+			print gE[50:53, 50002];
+			print gE[50:53, 50003];
+			print gE[50:53, 50004];
+			exit();
+
+			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
+			print ans;
+			gE = gE[:,1:];
+			ansMat = np.absolute(gradEmat - gE);
+			ansMat[: , 50003] = 0;
+			ansMat[: , 9406] = 0;
+			
+			indx =  nanargmax(ansMat);
+			print indx;
+			print gradEmat[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1] + 2)];
+			print gE[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1] + 2)];
+			geVec = np.array(geVec[0]);
+			print geVec.shape;
+
+			for i in xrange(9):
+				ans = np.amax(np.absolute(np.transpose(geVec[:,i,:]) - gradEntmat));
+				print ans;
+
+
+
+
+			exit();
+			"""
+			gW1 = np.array(gW1[0]);
+			ans = np.amax(np.absolute(gradW1mat - gW1));
+			print gW1.shape;
+			print gradW1mat[0,0,0:4,0:4];
+			print gW1[0,0,0:4,0:4];
+			print ans;
+
+
+			gU = np.array(gU[0]);
+			gU = np.squeeze(gU);
+			ans = np.amax(np.absolute(gradUmat - gU));
+			print gradUmat.shape;
+			print gU.shape;
+			print gU;
+			print gradUmat;
+			print ans;
+			gb1 = np.array(gb1[0]);
+			gb1 = np.squeeze(gb1);
+			ans = np.amax(np.absolute(gradb1mat - gb1));
+			print gb1.shape;
+			print gradb1mat.shape;
+			print gradb1mat;
+			print gb1;
+			print ans;
+			gW2 = np.array(gW2[0]);
+			ans = np.amax(np.absolute(gradW2mat - gW2));
+			print gW2.shape;
+			print gradW2mat[0,0:4,0:4];
+			print gW2[0,0:4,0:4];
+			print ans;
+			gE = np.array(gE[0]);
+			gE = gE[:,1:];
+			ansMat = np.absolute(gradEmat - gE);
+			indx =  nanargmax(ansMat);
+			print indx;
+			print gradEmat[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1] + 2)];
+			print "";
+			print gE[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1]+ 2)];
+			print "";
+			print ansMat[(indx[0] - 2):(indx[0]+ 2), (indx[1] - 2):(indx[1]+ 2)];
+			print "";
+			print ansMat[indx[0], indx[1]];
+			print gE.shape;
+			print gradEmat.shape;		
+
+			exit();
+			"""
+
+
+			exit()
+
+			
+
+		
+
+		# just the accuracy reproduced please
+		# just a dummy this 
+		devData.e3  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
+		
+		predictions, e1Ret = session.run([scorePosNet, e1], 
+		feed_dict={tree_holder: out,
+				treeLength_holder: lens, 
+				e1_holder        : devData.e1,
+				e2_holder        : devData.e2,
+				relation_holder  : devData.relations,
+				e3_holder        : devData.e3,
+				pred			 : True})
+		
+		predictions = np.ravel(predictions) # Jogar step
+		#print predictions
+		#print e1Ret
+
+		# max and min of predictions
+		# find best here
+		rmax = np.amax(predictions);
+		lmax = np.amin(predictions);
+
+		#print rmax
+
+		best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
+		best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
+		ySet = np.array([True, False], dtype=np.bool)  # put in the false
+		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
+
+		while lmax <= rmax:
+			yRetPred = (predictions <= lmax);
+			start = 0;
+			for i in xrange(data.num_relations):
+				lst = (devData.relations == i);
+				yGnd = yGroundAll[lst];
+
+				end = start + len(yGnd);
+
+				accuracy = np.mean(yRetPred[start:end] == yGnd);
+				start = end;
+
+				if accuracy > best_acc[i]:
+					best_acc[i]       = accuracy; 
+					best_threshold[i] = lmax;
+
+			lmax = lmax + 0.01;
+
+		
+			
+		#print best_threshold;
+		#print best_acc;	
+
+		# just a dummy this
+		testData.e3 = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
+
+		predictions, e1Ret = session.run([scorePosNet, e1],
+										 feed_dict={tree_holder: out,
+													treeLength_holder: lens,
+													e1_holder: testData.e1,
+													e2_holder: testData.e2,
+													relation_holder: testData.relations,
+													e3_holder: testData.e3,
+													pred			: True})
+
+		predictions = np.ravel(predictions) # Jogar step
+		ySet = np.array([True, False], dtype=np.bool)  # put in the false
+		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+
+		testAccSum = 0.0;
+		start = 0;
+		yGndSorted = np.zeros(predictions.shape);
+		print 'yREt', yRetPred.shape
+		for i in xrange(data.num_relations):
+			lst = (testData.relations == i);
+			yGnd = yGroundAll[lst];
+			yRetPred = (predictions <= best_threshold[i]);
+			end = start + len(yGnd);
+
+			accuracySum = np.sum(yRetPred[start:end] == yGnd);
+			yGndSorted[start:end] = yGnd;
+			testAccSum = testAccSum + accuracySum;
+			start = end;
+		testAccuracy = (testAccSum / testRows);
+		print 'test accuracy: ', testAccuracy;
+		if (testAccuracy > bestAccuracy):
+			bestAccuracy = testAccuracy;
+		print 'best accuracy: ', bestAccuracy;
+
+		precision = metrics.precision_score(yGndSorted, yRetPred);
+		print 'precision: ', precision;
+
+		#print r;
+	#print result
+	#print result.shape;
+	#print entVecRet.shape
+
+	#print entVecRet[38693]
+	#print aRet
+	#print concatRet
+
