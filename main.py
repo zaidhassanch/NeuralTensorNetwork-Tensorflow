@@ -134,7 +134,7 @@ with tf.Session() as session:
 	session.run(init);
 	bestAccuracy = 0.0;
 	
-	for i in xrange(200):
+	for i in xrange(400):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		
