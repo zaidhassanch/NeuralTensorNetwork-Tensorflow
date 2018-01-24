@@ -19,6 +19,11 @@ W2Mat = mat['W2Mat'];
 
 
 
+print W2Mat.shape;
+
+
+
+
 class NTN():
 
     def __init__(self, entityEmbeds, data):
@@ -66,7 +71,6 @@ class NTN():
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
 
         data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
-
         if(indexes == ""):
             feeddict = {
                 self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1, 1, corrupt_size)),
@@ -114,10 +118,15 @@ class NTN():
         #W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
         #W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
         #W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));   #randuni
-        W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
+        W2_1_shape = [self.num_relations, embedding_size * 2, embedding_size * 2]; 
+        W2_1 = tf.Variable(tf.truncated_normal(shape=W2_1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
+        W2_2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
         # b1 and u are extremely simple things
-        b1_shape = [self.num_relations, 1, slice_size,];
-        b1       = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64));   # grad of this var is awkward
+        b1_1_shape = [self.num_relations, 1, embedding_size * 2,];
+        b1_1       = tf.Variable(tf.zeros(shape=b1_1_shape, dtype = tf.float64));   # grad of this var is awkward
+        b1_2_shape = [self.num_relations, 1, slice_size,];
+        b1_2       = tf.Variable(tf.zeros(shape=b1_2_shape, dtype = tf.float64)); 
+
         U_shape  = [self.num_relations, 1, slice_size,];        # U shape is different
         U        = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
 
@@ -155,22 +164,30 @@ class NTN():
             # restrict yourself to special i
             W1specificTranspose = tf.gather(W1transpose,i);
 
-            firstBi = tf.tanh(tf.tensordot(W1specificTranspose, tf.transpose(entVecE2), axes = [[2], [0]]));
-            firstBiNeg = tf.tanh(tf.tensordot(W1specificTranspose, tf.transpose(entVecE2Neg), axes = [[2], [0]]));
+            firstBi = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2), axes = [[2], [0]]);
+            firstBiNeg = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2Neg), axes = [[2], [0]]);
             secondB = tf.multiply(tf.transpose(entVecE1), firstBi);
             secondBNeg = tf.multiply(tf.transpose(entVecE1Neg), firstBiNeg);
             finalBi = tf.reduce_sum(secondB , 1);
             finalBiNeg = tf.reduce_sum(secondBNeg , 1);
 
-            W2specific = W2[i,:,:];
-            b1specific = b1[i,:,:];
+            W2specific_1 = W2_1[i,:,:];
+            b1specific_1 = b1_1[i,:,:];
+            W2specific_2 = W2_2[i,:,:];
+            b1specific_2 = b1_2[i,:,:];
+
             concatEntVecs    = tf.concat([entVecE1, entVecE2], 1);
             concatEntNegVecs = tf.concat([entVecE1Neg, entVecE2Neg], 1);
-            simpleProd    = tf.add(tf.matmul(concatEntVecs, W2specific), b1specific);
-            simpleNegProd = tf.add(tf.matmul(concatEntNegVecs, W2specific), b1specific);
 
-            v_pos = simpleProd      + tf.transpose(finalBi);
-            v_neg = simpleNegProd   + tf.transpose(finalBiNeg);
+            simpleProd_1    = tf.tanh(tf.add(tf.matmul(concatEntVecs, W2specific_1), b1specific_1));
+            simpleNegProd_1 = tf.tanh(tf.add(tf.matmul(concatEntNegVecs, W2specific_1), b1specific_1));
+
+
+            simpleProd_2    = tf.add(tf.matmul(simpleProd_1, W2specific_2), b1specific_2);
+            simpleNegProd_2 = tf.add(tf.matmul(simpleNegProd_1, W2specific_2), b1specific_2);
+
+            v_pos = simpleProd_2      + tf.transpose(finalBi);
+            v_neg = simpleNegProd_2   + tf.transpose(finalBiNeg);
             z_pos = tf.tanh(v_pos);
             z_neg = tf.tanh(v_neg);
 
@@ -192,8 +209,8 @@ class NTN():
 
             cost = cost + partCost;
 
-        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
-        squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
+        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2_1)) + tf.reduce_sum(tf.square(W2_2)) + tf.reduce_sum(tf.square(b1_1));
+        squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U)) + tf.reduce_sum(tf.square(b1_1));
 
         loss = tf.divide(cost,batchSize) #+ reg_param / 2.0 * squareSum;    # This division probably results in div
                                                                             # of gradients
@@ -201,8 +218,8 @@ class NTN():
         gradsEmat  = tf.gradients(loss, Emat);
         gradsEntVec  = tf.gradients(loss, sumVecs);
         gradsW1 = tf.gradients(loss, W1);
-        gradsW2 = tf.gradients(loss, W2);
-        gradsB1 = tf.gradients(loss, b1);
+        gradsW2 = tf.gradients(loss, W2_1);
+        gradsB1 = tf.gradients(loss, b1_1);
         gradsU  = tf.gradients(loss, U);
         train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)  
 
