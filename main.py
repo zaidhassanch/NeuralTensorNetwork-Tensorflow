@@ -154,7 +154,7 @@ with tf.Session() as session:
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
 			geVec, gE, _ = session.run([gradsEntVec, gradsE, train_op] , feeddict_new);	# first Neg is wrong
-			
+			"""
 			#print lossRet;
 			geVec = np.array(geVec[0])
 			
@@ -167,7 +167,9 @@ with tf.Session() as session:
 			print ans;
 			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
 			print ans;
-			exit();
+			"""
+
+
 
 		# just the accuracy reproduced please
 		# just a dummy this 
