@@ -155,8 +155,8 @@ class NTN():
             # restrict yourself to special i
             W1specificTranspose = tf.gather(W1transpose,i);
 
-            firstBi = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2), axes = [[2], [0]]);
-            firstBiNeg = tf.tensordot(W1specificTranspose, tf.transpose(entVecE2Neg), axes = [[2], [0]]);
+            firstBi = tf.tanh(tf.tensordot(W1specificTranspose, tf.transpose(entVecE2), axes = [[2], [0]]));
+            firstBiNeg = tf.tanh(tf.tensordot(W1specificTranspose, tf.transpose(entVecE2Neg), axes = [[2], [0]]));
             secondB = tf.multiply(tf.transpose(entVecE1), firstBi);
             secondBNeg = tf.multiply(tf.transpose(entVecE1Neg), firstBiNeg);
             finalBi = tf.reduce_sum(secondB , 1);
