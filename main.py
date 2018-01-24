@@ -122,11 +122,7 @@ gradsEntVec, gradsE,scorePosNet, e1, train_op = ntnNetwork.buildGraph();
 
 init = tf.global_variables_initializer();
 
-
 print 'first loop', memoryUsage();
-dataIn = {};
-
-
 
 with tf.Session() as session:
 	print 'before session', memoryUsage()
@@ -134,11 +130,11 @@ with tf.Session() as session:
 	session.run(init);
 	bestAccuracy = 0.0;
 	
-	for i in xrange(400):
+	for i in xrange(200):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		
-		for j in xrange(5):
+		for j in xrange(batches):
 			
 			#indexes = range(j*batch_size,(j+1)*batch_size)
 			indexes = np.random.randint(0,dataRows,size = batch_size)
@@ -148,7 +144,7 @@ with tf.Session() as session:
 
 
 			if (random.uniform(0, 1) > 0.5):
-				data.flip 	= False;
+				data.flip 	= True;
 			else:
 				data.flip 	= False;
 			data.lens = lens;
@@ -158,7 +154,7 @@ with tf.Session() as session:
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
 			geVec, gE, _ = session.run([gradsEntVec, gradsE, train_op] , feeddict_new);	# first Neg is wrong
-			"""
+			
 			#print lossRet;
 			geVec = np.array(geVec[0])
 			
@@ -171,7 +167,7 @@ with tf.Session() as session:
 			print ans;
 			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
 			print ans;
-			"""
+			exit();
 
 		# just the accuracy reproduced please
 		# just a dummy this 
@@ -232,8 +228,6 @@ with tf.Session() as session:
 
 		testAccSum = 0.0;
 		start = 0;
-		yGndSorted = np.zeros(predictions.shape);
-		#print 'yREt', yRetPred.shape
 		for i in xrange(data.num_relations):
 			lst = (testData.relations == i);
 			yGnd = yGroundAll[lst];
@@ -241,12 +235,8 @@ with tf.Session() as session:
 			end = start + len(yGnd);
 
 			accuracySum = np.sum(yRetPred[start:end] == yGnd);
-			yGndSorted[start:end] = yGnd;
 			testAccSum = testAccSum + accuracySum;
 			start = end;
-		testAccuracy = (testAccSum / testRows);
-		print 'test accuracy: ', testAccuracy;
-		if (testAccuracy > bestAccuracy):
-			bestAccuracy = testAccuracy;
-		print 'best accuracy: ', bestAccuracy;
+
+		print 'test accuracy: ', (testAccSum / testRows)
 		
