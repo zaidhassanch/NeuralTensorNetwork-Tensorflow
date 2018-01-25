@@ -3,6 +3,7 @@ import tensorflow as tf
 import math
 import time
 import scipy.io
+import warnings
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 10;
@@ -71,26 +72,30 @@ class NTN():
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
 
         data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
-        if(indexes == ""):
-            feeddict = {
-                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1, 1, corrupt_size)),
-                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations, 1, corrupt_size)), 
-                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2, 1, corrupt_size)),
-                self.e3_holder        :  data.e3Make,
-                self.treeLength_holder:  data.lens, 
-                self.tree_holder      :  data.out,
-                self.pred             :  data.flip
-            }
-        else:
-            feeddict = {
-                self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size)),
-                self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size)), 
-                self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size)),
-                self.e3_holder        :  data.e3Make,
-                self.treeLength_holder:  data.lens, 
-                self.tree_holder      :  data.out,
-                self.pred             :  data.flip
-            }
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=FutureWarning)
+
+            if(indexes == ""):
+                feeddict = {
+                    self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1, 1, corrupt_size)),
+                    self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations, 1, corrupt_size)), 
+                    self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2, 1, corrupt_size)),
+                    self.e3_holder        :  data.e3Make,
+                    self.treeLength_holder:  data.lens, 
+                    self.tree_holder      :  data.out,
+                    self.pred             :  data.flip
+                }
+            else:
+                feeddict = {
+                    self.e1_holder        :  np.ravel(np.matlib.repmat(data.e1[indexes], 1, corrupt_size)),
+                    self.relation_holder  :  np.ravel(np.matlib.repmat(data.relations[indexes], 1, corrupt_size)), 
+                    self.e2_holder        :  np.ravel(np.matlib.repmat(data.e2[indexes], 1, corrupt_size)),
+                    self.e3_holder        :  data.e3Make,
+                    self.treeLength_holder:  data.lens, 
+                    self.tree_holder      :  data.out,
+                    self.pred             :  data.flip
+                }
+                exit();
         return feeddict;
 
     def update_x_2(self, inputVar):
