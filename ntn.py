@@ -95,7 +95,7 @@ class NTN():
                     self.tree_holder      :  data.out,
                     self.pred             :  data.flip
                 }
-                exit();
+                
         return feeddict;
 
     def update_x_2(self, inputVar):
