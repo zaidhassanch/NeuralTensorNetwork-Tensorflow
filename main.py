@@ -206,10 +206,10 @@ with tf.Session() as session:
 		testData.lens = lens;
 		testData.flip = True;
 
-		for i in xrange(2):
-			if(i == 0):
+		for j in xrange(2):
+			if(j == 0):
 				feeddict_new = ntnNetwork.makeFeedDict(testData);
-			elif(i == 1):
+			elif(j == 1):
 				feeddict_new = ntnNetwork.makeFeedDict(data);
 			
 
@@ -218,9 +218,9 @@ with tf.Session() as session:
 			predictions = np.ravel(predictions) # Jogar step
 			ySet = np.array([True, False], dtype=np.bool)  # put in the false
 
-			if(i == 0):
+			if(j == 0):
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2));
-			elif(i == 1):
+			elif(j == 1):
 				print dataRows
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows // 2));
 				print "yGround 112", yGroundAll.shape;
@@ -230,9 +230,9 @@ with tf.Session() as session:
 			testAccSum = 0.0;
 			start = 0;
 			for i in xrange(data.num_relations):
-				if(i == 0):
+				if(j == 0):
 					lst = (testData.relations == i);
-				elif(i == 1):
+				elif(j == 1):
 					lst = (data.relations == i);
 				
 				print yGroundAll.shape;
@@ -247,8 +247,8 @@ with tf.Session() as session:
 				accuracySum = np.sum(yRetPred[start:end] == yGnd);
 				testAccSum = testAccSum + accuracySum;
 				start = end;
-			if(i == 0):
+			if(j == 0):
 				print 'test accuracy: ', (testAccSum / testRows);
-			elif(i == 1):
+			elif(j == 1):
 				print 'train accuracy: ', (testAccSum / dataRows);		
 		
