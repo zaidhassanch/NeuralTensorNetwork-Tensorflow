@@ -233,8 +233,12 @@ with tf.Session() as session:
 				elif(i == 1):
 					lst = (data.relations == i);
 				
-
+				print yGroundAll.shape;
+				print lst.shape;
 				yGnd = yGroundAll[lst];
+				
+
+
 				yRetPred = (predictions <= best_threshold[i]);
 				end = start + len(yGnd);
 
