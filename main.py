@@ -221,7 +221,9 @@ with tf.Session() as session:
 			if(i == 0):
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2));
 			elif(i == 1):
+				print dataRows
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows // 2));
+				print "yGround 112", yGroundAll.shape;
 
 			
 
