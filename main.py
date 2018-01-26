@@ -216,13 +216,13 @@ with tf.Session() as session:
 			predictions, e1Ret = session.run([scorePosNet, e1],feeddict_new);
 
 			predictions = np.ravel(predictions) # Jogar step
-			ySet = np.array([True, False], dtype=np.bool)  # put in the false
+			ySet = np.array([True], dtype=np.bool)  # put in the false
 
 			if(j == 0):
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2));
 			elif(j == 1):
 				print dataRows
-				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows // 2));
+				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows));
 				print "yGround 112", yGroundAll.shape;
 
 			
