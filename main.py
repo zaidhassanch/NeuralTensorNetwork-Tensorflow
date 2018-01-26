@@ -222,7 +222,7 @@ with tf.Session() as session:
 				ySet = np.array([True, False], dtype=np.bool)  # put in the false
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2));
 			elif(j == 1):
-				ySet = np.array([True, False], dtype=np.bool)  # put in the false
+				ySet = np.array([True], dtype=np.bool)  # put in the false
 				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows));
 				print "yGround 112", yGroundAll.shape;
 
