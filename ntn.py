@@ -97,7 +97,7 @@ class NTN():
                     self.tree_holder      :  data.out,
                     self.pred             :  data.flip
                 }
-                print "yo";
+                
         return feeddict;
 
     def update_x_2(self, inputVar):
@@ -125,12 +125,12 @@ class NTN():
         #W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
         #W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
         #W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));   #randuni
-        W2_1_shape = [self.num_relations, embedding_size * 2, embedding_size * 2]; 
-        W2_1 = tf.Variable(tf.truncated_normal(shape=W2_1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
+        #W2_1_shape = [self.num_relations, embedding_size * 2, embedding_size * 2]; 
+        #W2_1 = tf.Variable(tf.truncated_normal(shape=W2_1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
         W2_2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
         # b1 and u are extremely simple things
-        b1_1_shape = [self.num_relations, 1, embedding_size * 2,];
-        b1_1       = tf.Variable(tf.zeros(shape=b1_1_shape, dtype = tf.float64));   # grad of this var is awkward
+        #b1_1_shape = [self.num_relations, 1, embedding_size * 2,];
+        #b1_1       = tf.Variable(tf.zeros(shape=b1_1_shape, dtype = tf.float64));   # grad of this var is awkward
         b1_2_shape = [self.num_relations, 1, slice_size,];
         b1_2       = tf.Variable(tf.zeros(shape=b1_2_shape, dtype = tf.float64)); 
 
@@ -178,20 +178,20 @@ class NTN():
             finalBi = tf.reduce_sum(secondB , 1);
             finalBiNeg = tf.reduce_sum(secondBNeg , 1);
 
-            W2specific_1 = W2_1[i,:,:];
-            b1specific_1 = b1_1[i,:,:];
+            #W2specific_1 = W2_1[i,:,:];
+            #b1specific_1 = b1_1[i,:,:];
             W2specific_2 = W2_2[i,:,:];
             b1specific_2 = b1_2[i,:,:];
 
             concatEntVecs    = tf.concat([entVecE1, entVecE2], 1);
             concatEntNegVecs = tf.concat([entVecE1Neg, entVecE2Neg], 1);
 
-            simpleProd_1    = tf.tanh(tf.add(tf.matmul(concatEntVecs, W2specific_1), b1specific_1));
-            simpleNegProd_1 = tf.tanh(tf.add(tf.matmul(concatEntNegVecs, W2specific_1), b1specific_1));
+            #simpleProd_1    = tf.tanh(tf.add(tf.matmul(concatEntVecs, W2specific_1), b1specific_1));
+            #simpleNegProd_1 = tf.tanh(tf.add(tf.matmul(concatEntNegVecs, W2specific_1), b1specific_1));
 
 
-            simpleProd_2    = tf.add(tf.matmul(simpleProd_1, W2specific_2), b1specific_2);
-            simpleNegProd_2 = tf.add(tf.matmul(simpleNegProd_1, W2specific_2), b1specific_2);
+            simpleProd_2    = tf.add(tf.matmul(concatEntVecs, W2specific_2), b1specific_2);
+            simpleNegProd_2 = tf.add(tf.matmul(concatEntNegVecs, W2specific_2), b1specific_2);
 
             v_pos = simpleProd_2      + tf.transpose(finalBi);
             v_neg = simpleNegProd_2   + tf.transpose(finalBiNeg);
@@ -216,8 +216,8 @@ class NTN():
 
             cost = cost + partCost;
 
-        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2_1)) + tf.reduce_sum(tf.square(W2_2)) + tf.reduce_sum(tf.square(b1_1));
-        squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U)) + tf.reduce_sum(tf.square(b1_1));
+        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2_2)) + tf.reduce_sum(tf.square(b1_2));
+        squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 
         loss = tf.divide(cost,batchSize) #+ reg_param / 2.0 * squareSum;    # This division probably results in div
                                                                             # of gradients
@@ -225,19 +225,20 @@ class NTN():
         gradsEmat  = tf.gradients(loss, Emat);
         gradsEntVec  = tf.gradients(loss, sumVecs);
         gradsW1 = tf.gradients(loss, W1);
-        gradsW2 = tf.gradients(loss, W2_1);
-        gradsB1 = tf.gradients(loss, b1_1);
+        #gradsW2 = tf.gradients(loss, W2_1);
+        #gradsB1 = tf.gradients(loss, b1_1);
         gradsU  = tf.gradients(loss, U);
         train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)  
 
-        return gradsEntVec, gradsE,scorePosNet, e1, train_op;
+        return gradsEntVec, e1,scorePosNet, loss, train_op;
 
 
     def buildGraph(self):
-        gradsEntVec, gradsE,scorePosNet, e1, train_op = self.makeComputeGraph()
+        gradsEntVec, e1,scorePosNet, loss, train_op = self.makeComputeGraph()
+        tf.summary.scalar('loss', loss)
         merged = tf.summary.merge_all()
         
-        return gradsEntVec, gradsE,scorePosNet, e1, train_op
+        return merged, e1,scorePosNet, loss, train_op
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 

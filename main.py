@@ -116,8 +116,15 @@ print 'square ', np.sum(np.square(E_matrix))
 print E_matrix.dtype
 print memoryUsage()
 
+def makeSummary(data, writer, sess, merged, indexes = ""):
+    feeddict = dnnNet.makeFeedDict(data, indexes);
+    summary = sess.run(merged, feed_dict=feeddict)
+    writer.add_summary(summary, i)
+    writer.flush()
+
 ntnNetwork          = NTN(E_matrix, data);
-gradsEntVec, gradsE,scorePosNet, e1, train_op = ntnNetwork.buildGraph();
+merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
+
 
 
 init = tf.global_variables_initializer();
@@ -125,6 +132,7 @@ init = tf.global_variables_initializer();
 print 'first loop', memoryUsage();
 
 with tf.Session() as session:
+	train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
 	print 'before session', memoryUsage()
 
 	session.run(init);
@@ -153,7 +161,8 @@ with tf.Session() as session:
 			#flip 	= True;
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
-			geVec, gE, _ = session.run([gradsEntVec, gradsE, train_op] , feeddict_new);	# first Neg is wrong
+			_,lossRet = session.run([train_op, loss] , feeddict_new);	# first Neg is wrong
+			print 'loss', lossRet;	
 
 
 		# just the accuracy reproduced please
@@ -249,5 +258,6 @@ with tf.Session() as session:
 			if(j == 0):
 				print 'test accuracy: ', (testAccSum / testRows);
 			elif(j == 1):
-				print 'train accuracy: ', (testAccSum / dataRows);		
-		
+				print 'train accuracy: ', (testAccSum / dataRows);	
+		if(i%5 == 0):
+			makeSummary(data, train_writer, session, merged, indexes);
