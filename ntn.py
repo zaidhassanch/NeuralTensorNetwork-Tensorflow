@@ -72,6 +72,8 @@ class NTN():
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
 
         data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
+
+        # Keep an eye on version of python for indexes == ""'s interpretation
         with warnings.catch_warnings():
             warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -233,8 +235,9 @@ class NTN():
 
     def buildGraph(self):
         gradsEntVec, gradsE,scorePosNet, e1, train_op = self.makeComputeGraph()
+        merged = tf.summary.merge_all()
         
-        return gradsEntVec, gradsE,scorePosNet, e1, train_op
+        return gradsEntVec, gradsE,scorePosNet, e1, train_op, merged
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 

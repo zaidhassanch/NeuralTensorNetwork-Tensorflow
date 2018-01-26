@@ -154,21 +154,6 @@ with tf.Session() as session:
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
 			geVec, gE, _ = session.run([gradsEntVec, gradsE, train_op] , feeddict_new);	# first Neg is wrong
-			"""
-			#print lossRet;
-			geVec = np.array(geVec[0])
-			
-			#print zPosRet.shape;
-			gE = np.array(gE[0]);
-			print gE.shape;
-			print gradEmat.shape;
-
-			ans = np.amax(np.absolute(np.transpose(geVec) - gradEntmat));
-			print ans;
-			ans = np.amax(np.absolute(gE[:,1:] - gradEmat));
-			print ans;
-			"""
-
 
 
 		# just the accuracy reproduced please
@@ -220,25 +205,44 @@ with tf.Session() as session:
 		testData.out = out;
 		testData.lens = lens;
 		testData.flip = True;
-		feeddict_new = ntnNetwork.makeFeedDict(testData);
 
-		predictions, e1Ret = session.run([scorePosNet, e1],feeddict_new);
+		for i in xrange(2):
+			if(i == 0):
+				feeddict_new = ntnNetwork.makeFeedDict(testData);
+			elif(i == 1):
+				feeddict_new = ntnNetwork.makeFeedDict(data);
+			
 
-		predictions = np.ravel(predictions) # Jogar step
-		ySet = np.array([True, False], dtype=np.bool)  # put in the false
-		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2))
+			predictions, e1Ret = session.run([scorePosNet, e1],feeddict_new);
 
-		testAccSum = 0.0;
-		start = 0;
-		for i in xrange(data.num_relations):
-			lst = (testData.relations == i);
-			yGnd = yGroundAll[lst];
-			yRetPred = (predictions <= best_threshold[i]);
-			end = start + len(yGnd);
+			predictions = np.ravel(predictions) # Jogar step
+			ySet = np.array([True, False], dtype=np.bool)  # put in the false
 
-			accuracySum = np.sum(yRetPred[start:end] == yGnd);
-			testAccSum = testAccSum + accuracySum;
-			start = end;
+			if(i == 0):
+				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, testRows // 2));
+			elif(i == 1):
+				yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, dataRows // 2));
 
-		print 'test accuracy: ', (testAccSum / testRows)
+			
+
+			testAccSum = 0.0;
+			start = 0;
+			for i in xrange(data.num_relations):
+				if(i == 0):
+					lst = (testData.relations == i);
+				elif(i == 1):
+					lst = (data.relations == i);
+				
+
+				yGnd = yGroundAll[lst];
+				yRetPred = (predictions <= best_threshold[i]);
+				end = start + len(yGnd);
+
+				accuracySum = np.sum(yRetPred[start:end] == yGnd);
+				testAccSum = testAccSum + accuracySum;
+				start = end;
+			if(i == 0):
+				print 'test accuracy: ', (testAccSum / testRows);
+			elif(i == 1):
+				print 'train accuracy: ', (testAccSum / dataRows);		
 		
