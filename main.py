@@ -116,13 +116,14 @@ print 'square ', np.sum(np.square(E_matrix))
 print E_matrix.dtype
 print memoryUsage()
 
+ntnNetwork          = NTN(E_matrix, data);
 def makeSummary(data, writer, sess, merged, indexes = ""):
-    feeddict = dnnNet.makeFeedDict(data, indexes);
+    feeddict = ntnNetwork.makeFeedDict(data, indexes);
     summary = sess.run(merged, feed_dict=feeddict)
     writer.add_summary(summary, i)
     writer.flush()
 
-ntnNetwork          = NTN(E_matrix, data);
+
 merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
 
 
