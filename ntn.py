@@ -237,7 +237,7 @@ class NTN():
         gradsEntVec, gradsE,scorePosNet, e1, train_op = self.makeComputeGraph()
         merged = tf.summary.merge_all()
         
-        return gradsEntVec, gradsE,scorePosNet, e1, train_op, merged
+        return gradsEntVec, gradsE,scorePosNet, e1, train_op
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 
