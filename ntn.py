@@ -112,20 +112,14 @@ class NTN():
             E_Var = tf.identity(E_Var);
 
         #W1_shape = [embedding_size, embedding_size, slice_size, data.num_relations]; # change num_relations pos
-        #W1 = tf.Variable(tf.ones(shape=W1_shape, dtype = tf.float64)); #trun
         #W1 = tf.Variable(tf.truncated_normal(shape=W1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size)); #trun
         W1 = tf.Variable(dtype=tf.float64, initial_value= W1Mat,trainable=True)
         #W2_shape = [data.num_relations, embedding_size * 2, slice_size]; 
-        #W2 = tf.Variable(tf.ones(shape=W2_shape, dtype = tf.float64));
         #W2 = tf.Variable(tf.random_uniform(shape=W2_shape, dtype = tf.float64));   #randuni
-        #W2_1_shape = [self.num_relations, embedding_size * 2, embedding_size * 2]; 
-        #W2_1 = tf.Variable(tf.truncated_normal(shape=W2_1_shape, dtype = tf.float64, stddev = 6.0 / embedding_size));
-        W2_2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
+        W2 = tf.Variable(dtype=tf.float64, initial_value= W2Mat,trainable=True)
         # b1 and u are extremely simple things
-        #b1_1_shape = [self.num_relations, 1, embedding_size * 2,];
-        #b1_1       = tf.Variable(tf.zeros(shape=b1_1_shape, dtype = tf.float64));   # grad of this var is awkward
-        b1_2_shape = [self.num_relations, 1, slice_size,];
-        b1_2       = tf.Variable(tf.zeros(shape=b1_2_shape, dtype = tf.float64)); 
+        b1_shape = [self.num_relations, 1, slice_size,];
+        b1       = tf.Variable(tf.zeros(shape=b1_shape, dtype = tf.float64)); 
 
         U_shape  = [self.num_relations, 1, slice_size,];        # U shape is different
         U        = tf.Variable(tf.ones(shape=U_shape, dtype = tf.float64));
@@ -155,7 +149,6 @@ class NTN():
             entVecE1 = tf.squeeze(tf.gather(entVec,e1));
             entVecE2 = tf.squeeze(tf.gather(entVec,e2));
             entVecE3 = tf.squeeze(tf.gather(entVec,e3));
-            #entVecE1N = tf.Variable(tf.zeros(shape = entVecE1.get_shape()));
 
             entVecE1Neg = tf.cond(self.pred, lambda: self.update_x_2(entVecE1), lambda: self.update_x_2(entVecE3))
             entVecE2Neg = tf.cond(self.pred, lambda: self.update_x_2(entVecE3), lambda: self.update_x_2(entVecE2))
@@ -171,23 +164,17 @@ class NTN():
             finalBi = tf.reduce_sum(secondB , 1);
             finalBiNeg = tf.reduce_sum(secondBNeg , 1);
 
-            #W2specific_1 = W2_1[i,:,:];
-            #b1specific_1 = b1_1[i,:,:];
-            W2specific_2 = W2_2[i,:,:];
-            b1specific_2 = b1_2[i,:,:];
+            W2specific = W2[i,:,:];
+            W2specific = b1[i,:,:];
 
             concatEntVecs    = tf.concat([entVecE1, entVecE2], 1);
             concatEntNegVecs = tf.concat([entVecE1Neg, entVecE2Neg], 1);
 
-            #simpleProd_1    = tf.tanh(tf.add(tf.matmul(concatEntVecs, W2specific_1), b1specific_1));
-            #simpleNegProd_1 = tf.tanh(tf.add(tf.matmul(concatEntNegVecs, W2specific_1), b1specific_1));
+            simpleProd    = tf.add(tf.matmul(concatEntVecs, W2specific), W2specific);
+            simpleNegProd = tf.add(tf.matmul(concatEntNegVecs, W2specific), W2specific);
 
-
-            simpleProd_2    = tf.add(tf.matmul(concatEntVecs, W2specific_2), b1specific_2);
-            simpleNegProd_2 = tf.add(tf.matmul(concatEntNegVecs, W2specific_2), b1specific_2);
-
-            v_pos = simpleProd_2      + tf.transpose(finalBi);
-            v_neg = simpleNegProd_2   + tf.transpose(finalBiNeg);
+            v_pos = simpleProd      + tf.transpose(finalBi);
+            v_neg = simpleNegProd   + tf.transpose(finalBiNeg);
             z_pos = tf.tanh(v_pos);
             z_neg = tf.tanh(v_neg);
 
@@ -209,7 +196,7 @@ class NTN():
 
             cost = cost + partCost;
 
-        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2_2)) + tf.reduce_sum(tf.square(b1_2));
+        squareSum = tf.reduce_sum(tf.square(W1)) + tf.reduce_sum(tf.square(W2)) + tf.reduce_sum(tf.square(b1));
         squareSum = squareSum +  tf.reduce_sum(tf.square(E_Var)) + tf.reduce_sum(tf.square(U));
 
         loss = tf.divide(cost,batchSize) #+ reg_param / 2.0 * squareSum;    # This division probably results in div
