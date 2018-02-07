@@ -50,38 +50,10 @@ dataSet  = 'Wordnet/'
 dataPath = '../data/' + dataSet;
 savePath = '../output/'
 initialPath = '../data/' + dataSet + 'initialize.mat';
-"""
-valuesPath = '../data/' + dataSet + 'regValues.mat';
-lstE3Path = '../data/' + dataSet + 'lstE3.mat';
-forwardValsPath = '../data/' + dataSet + 'forwardValues.mat';
-specificValsPath = '../data/' + dataSet + 'specificValues.mat';
-outputValsPath = '../data/' + dataSet + 'outputValues_orig.mat';
-"""
 mat       = scipy.io.loadmat(initialPath);
-"""
-valuesMat = scipy.io.loadmat(valuesPath);
-mat2 = scipy.io.loadmat(lstE3Path);
-forwardMat = scipy.io.loadmat(forwardValsPath);
-specificMat = scipy.io.loadmat(specificValsPath);
-"""
-
-
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
-"""
-gradW1mat = valuesMat['gradW1mat'];
-gradW2mat = valuesMat['gradW2mat'];
-gradb1mat = valuesMat['gradb1mat'];
-gradUmat = valuesMat['gradUmat'];
-gradEmat = valuesMat['gradE'];
-gradEntmat = valuesMat['entVecGrad'];
-gradSpecMat = specificMat['entVecGrad_specific'];
-"""
 
-#e3Mat = np.squeeze(mat2['e3']) - 1;
-#lstMat = np.squeeze(mat2['lst']) - 1;
-#scorePosMat = forwardMat['score_pos'];
-#scoreNegMat = forwardMat['score_neg'];
 
 with open('DnnData_data.pkl', 'rb') as inputFile:
     data = pickle.load(inputFile)
