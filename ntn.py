@@ -30,14 +30,7 @@ class NTN():
     def __init__(self, entityEmbeds, data):
         self.E_matrix = entityEmbeds
         self.head_length   = 100   # this is a constant for this example
-        self.relat_length  = 50
-        self.input_length  = self.head_length + self.relat_length
-        self.hidden1_size  = 500
-        self.hidden2_size  = 500
-        self.hidden3_size  = 500
-        self.num_classes   = 100
         self.num_relations = data.num_relations;
-        self.keep_prob     = 0.8
         self.e1_holder    = "";
         self.e2_holder    = "";
         self.relat_holder = "";

@@ -1,13 +1,11 @@
 from sklearn import metrics
 import numpy as np 
-import DnnData
 import csv
 import math
 import tensorflow as tf
 from scipy.io import loadmat
 import os
 import psutil
-import DnnData
 import random
 import scipy.io
 import pickle
