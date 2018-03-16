@@ -18,22 +18,6 @@ slice_size = 3;
 corrupt_size = 10;
 
 
-def nanargmax(a):
-    idx = np.argmax(a, axis=None)
-    multi_idx = np.unravel_index(idx, a.shape)
-    if np.isnan(a[multi_idx]):
-        nan_count = np.sum(np.isnan(a))
-        # In numpy < 1.8 use idx = np.argsort(a, axis=None)[-nan_count-1]
-        idx = np.argpartition(a, -nan_count-1, axis=None)[-nan_count-1]
-        multi_idx = np.unravel_index(idx, a.shape)
-    return multi_idx
-
-def memoryUsage():
-	pid = os.getpid()
-	py = psutil.Process(pid)
-	memoryUse = py.memory_info()[0]/1e6;  # memory use in GB...I think
-	print('==> memory use:', memoryUse)
-
 
 print "Starting DNN Network ..."
 
@@ -84,7 +68,7 @@ print 'square ', np.sum(np.square(word_embeds))
 E_matrix[:,1:] = word_embeds
 print 'square ', np.sum(np.square(E_matrix))
 print E_matrix.dtype
-print memoryUsage()
+
 
 ntnNetwork          = NTN(E_matrix, data);
 def makeSummary(data, writer, sess, merged, indexes = ""):
@@ -100,7 +84,7 @@ merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
 
 init = tf.global_variables_initializer();
 
-print 'first loop', memoryUsage();
+
 
 with tf.Session() as session:
 	train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
