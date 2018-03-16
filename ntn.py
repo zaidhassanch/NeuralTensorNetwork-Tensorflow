@@ -4,10 +4,12 @@ import math
 import time
 import scipy.io
 import warnings
+
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 10;
-slice_size = 3;
+
+
 no_of_entities = 38696;
 batch_size = 20000;
 dataSet  = 'Wordnet/';

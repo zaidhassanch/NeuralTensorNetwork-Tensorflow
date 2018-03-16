@@ -10,6 +10,7 @@ import random
 import scipy.io
 import pickle
 from ntn import NTN
+import DnnData
 
 no_of_entities = 38696;
 flipType = 0;
@@ -45,91 +46,102 @@ print "Starting DNN Network ..."
 # how are the words going to get used
 # how are the text files going to be read
 
+def start(dataSet, dataPath, savePath, initialPath):
+	mat       = scipy.io.loadmat(initialPath);
+	W1Mat = mat['W1Mat'];
+	W2Mat = mat['W2Mat'];
+	"""
+	with open('DnnData_data.pkl', 'rb') as inputFile:
+	    data = pickle.load(inputFile)
+	    testData = pickle.load(inputFile)
+	    devData = pickle.load(inputFile)
+	"""
+	data = DnnData.dataGen(dataPath, 'entities.txt', 'train.txt', 'relations.txt');
+	dataRows = len(data.e1)
 
-dataSet  = 'Wordnet/'
-dataPath = '../data/' + dataSet;
-savePath = '../output/'
-initialPath = '../data/' + dataSet + 'initialize.mat';
-mat       = scipy.io.loadmat(initialPath);
-W1Mat = mat['W1Mat'];
-W2Mat = mat['W2Mat'];
+	testData = DnnData.dataGen(dataPath, 'entities.txt', 'test.txt', 'relations.txt');
+	testRows = len(testData.e1)
 
-
-with open('DnnData_data.pkl', 'rb') as inputFile:
-    data = pickle.load(inputFile)
-    testData = pickle.load(inputFile)
-    devData = pickle.load(inputFile)
-
-dataRows = len(data.e1)
-testRows = len(testData.e1)
-devRows = len(devData.e1)
-
-
-with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
-    rows = csv.reader(csvfile)
-    tree = list(rows);
-    print(tree[0])
-
-lens = np.array([len(i) for i in tree])
-print lens.shape
-mask = np.arange(lens.max()) < lens[:,None]
-out = np.zeros(mask.shape, dtype= np.int)
-out[mask] = np.concatenate(tree)
-#print out
-
-E_matrix = np.zeros(shape = (100, 67448)); 	# As opposed to zeros to ensure error warning
-matVars = loadmat(dataPath + 'initEmbed.mat');
-word_embeds = matVars['We'];
-print 'square ', np.sum(np.square(word_embeds))
-E_matrix[:,1:] = word_embeds
-print 'square ', np.sum(np.square(E_matrix))
-print E_matrix.dtype
-print memoryUsage()
-
-ntnNetwork          = NTN(E_matrix, data);
-def makeSummary(data, writer, sess, merged, indexes = ""):
-    feeddict = ntnNetwork.makeFeedDict(data, indexes);
-    summary = sess.run(merged, feed_dict=feeddict)
-    writer.add_summary(summary, i)
-    writer.flush()
-
-
-merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
-
-
-
-init = tf.global_variables_initializer();
-
-print 'first loop', memoryUsage();
-
-with tf.Session() as session:
-	train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
-	print 'before session', memoryUsage()
-
-	session.run(init);
-	bestAccuracy = 0.0;
+	devData = DnnData.dataGen(dataPath, 'entities.txt', 'dev.txt', 'relations.txt');
+	devRows = len(devData.e1)
 	
-	for i in xrange(200):
-		print 'iter:', i;
-		batches = dataRows // batch_size;
+	with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
+	    rows = csv.reader(csvfile)
+	    tree = list(rows);
+	    print(tree[0])
+
+
+
+	dataRows = len(data.e1)
+	testRows = len(testData.e1)
+	devRows = len(devData.e1)
+	print dataRows;
+	exit();
+	
+	
+	
+	
+	lens = np.array([len(i) for i in tree])
+	print lens.shape
+	mask = np.arange(lens.max()) < lens[:,None]
+	out = np.zeros(mask.shape, dtype= np.int)
+	out[mask] = np.concatenate(tree)
+	#print out
+	
+	E_matrix = np.zeros(shape = (100, 67448)); 	# As opposed to zeros to ensure error warning
+	matVars = loadmat(dataPath + 'initEmbed.mat');
+	word_embeds = matVars['We'];
+	print 'square ', np.sum(np.square(word_embeds))
+	E_matrix[:,1:] = word_embeds
+	print 'square ', np.sum(np.square(E_matrix))
+	print E_matrix.dtype
+	print memoryUsage()
+	def makeSummary(data, writer, sess, merged, indexes = ""):
+	    feeddict = ntnNetwork.makeFeedDict(data, indexes);
+	    summary = sess.run(merged, feed_dict=feeddict)
+	    writer.add_summary(summary, i)
+	    writer.flush()
+
+
+
+	# code after data preparation
+	
+	ntnNetwork          = NTN(E_matrix, data);
+
+
+	merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
+	
+	
+	
+	init = tf.global_variables_initializer();
 		
-		for j in xrange(batches):
+	with tf.Session() as session:
+		train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
+	
+		session.run(init);
+		bestAccuracy = 0.0;
+		
+		for i in xrange(200):
+			print 'iter:', i;
+			batches = dataRows // batch_size;
 			
-			#indexes = range(j*batch_size,(j+1)*batch_size)
-			indexes = np.random.randint(0,dataRows,size = batch_size)
-			#print indexes.shape		
-			#data.e3Make = e3Mat; Or inside
-			# this should not be starting from 1
-
-
-			if (random.uniform(0, 1) > 0.5):
-				data.flip 	= True;
-			else:
-				data.flip 	= False;
-			data.lens = lens;
-			data.out  = out;
-			
-			#flip 	= True;
+			for j in xrange(batches):
+				
+				#indexes = range(j*batch_size,(j+1)*batch_size)
+				indexes = np.random.randint(0,dataRows,size = batch_size)
+				#print indexes.shape		
+				#data.e3Make = e3Mat; Or inside
+				# this should not be starting from 1
+	
+	
+				if (random.uniform(0, 1) > 0.5):
+					data.flip 	= True;
+				else:
+					data.flip 	= False;
+				data.lens = lens;
+				data.out  = out;
+				
+				#flip 	= True;
         
 			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
 			_,lossRet = session.run([train_op, loss] , feeddict_new);	# first Neg is wrong
