@@ -4,6 +4,7 @@ import math
 import time
 import scipy.io
 import warnings
+import random
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 10;
@@ -31,6 +32,8 @@ class NTN():
         self.E_matrix = entityEmbeds
         self.head_length   = 100   # this is a constant for this example
         self.num_relations = data.num_relations;
+        self.loss         = "";
+        self.train_op     = "";
         self.e1_holder    = "";
         self.e2_holder    = "";
         self.relat_holder = "";
@@ -223,6 +226,9 @@ class NTN():
         gradsU  = tf.gradients(loss, U);
         train_op = tf.train.AdamOptimizer(1e-3).minimize(loss)  
 
+        self.train_op = train_op;
+        self.loss     = loss;
+
         return gradsEntVec, e1,scorePosNet, loss, train_op;
 
 
@@ -245,3 +251,19 @@ class NTN():
         feeddict_new = self.makeFeedDict(data, learningRate, indexes);
         accRet= sess.run(accuracy, feeddict_new)
         return accRet
+
+    def train(self, session, data):
+        dataRows = len(data.e1)
+        indexes = np.random.randint(0,dataRows,size = batch_size)
+        if (random.uniform(0, 1) > 0.5):
+            data.flip   = True;
+        else:
+            data.flip   = False;
+
+        
+        #flip   = True;
+    
+        feeddict_new = self.makeFeedDict(data, indexes, 10); # indexes or lstMat
+        _,lossRet = session.run([self.train_op, self.loss] , feeddict_new);   # first Neg is wrong
+        print 'loss', lossRet;
+        return;

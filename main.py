@@ -1,21 +1,69 @@
 from sklearn import metrics
 import numpy as np 
-import csv
 import math
 import tensorflow as tf
 from scipy.io import loadmat
 import os
 import psutil
-import random
+
 import scipy.io
 import pickle
 from ntn import NTN
+import DnnData
 
 no_of_entities = 38696;
 flipType = 0;
 batch_size = 20000;
 slice_size = 3;
 corrupt_size = 10;
+
+def bestThreshold(devData, session, scorePosNet):
+	bestAccuracy = 0.0;
+
+	# just the accuracy reproduced please
+	# just a dummy this 
+	devData.e3Make  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
+	devData.out = out;
+	devData.lens = lens;
+	devData.flip = True;
+	feeddict_new = ntnNetwork.makeFeedDict(devData);
+
+	predictions = session.run(scorePosNet, feeddict_new)
+	
+	predictions = np.ravel(predictions) # Jogar step
+	#print predictions
+	#print e1Ret
+
+	# max and min of predictions
+	# find best here
+	rmax = np.amax(predictions);
+	lmax = np.amin(predictions);
+
+	#print rmax
+
+	best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
+	best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
+	ySet = np.array([True, False], dtype=np.bool)  # put in the false
+	yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
+
+	while lmax <= rmax:
+		yRetPred = (predictions <= lmax);
+		start = 0;
+		for i in xrange(data.num_relations):
+			lst = (devData.relations == i);
+			yGnd = yGroundAll[lst];
+
+			end = start + len(yGnd);
+
+			accuracy = np.mean(yRetPred[start:end] == yGnd);
+			start = end;
+
+			if accuracy > best_acc[i]:
+				best_acc[i]       = accuracy; 
+				best_threshold[i] = lmax;
+
+		lmax = lmax + 0.01;
+	return best_threshold;
 
 
 
@@ -30,9 +78,11 @@ print "Starting DNN Network ..."
 # how are the text files going to be read
 
 
-dataSet  = 'Wordnet/'
+dataSet  = 'Wordnet/';
 dataPath = '../data/' + dataSet;
-savePath = '../output/'
+savePath = '../output/';
+
+# no worries
 initialPath = '../data/' + dataSet + 'initialize.mat';
 mat       = scipy.io.loadmat(initialPath);
 W1Mat = mat['W1Mat'];
@@ -50,10 +100,12 @@ testRows = len(testData.e1)
 devRows = len(devData.e1)
 
 
-out, E_matrix
+out, lens, E_matrix = DnnData.loadVars(dataPath);
+data.lens = lens;
+data.out  = out;
 
 print E_matrix[1:4,1:4]
-exit();
+
 
 
 ntnNetwork          = NTN(E_matrix, data);
@@ -69,81 +121,24 @@ def makeSummary(data, writer, sess, merged, indexes = ""):
 
 with tf.Session() as session:
 	train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
-	print 'before session', memoryUsage()
-
 	session.run(init);
-	bestAccuracy = 0.0;
+	
 	
 	for i in xrange(200):
 		print 'iter:', i;
 		batches = dataRows // batch_size;
 		
-		for j in xrange(batches):
+		for j in xrange(1):
+
+			ntnNetwork.train(session, data);
 			
-			#indexes = range(j*batch_size,(j+1)*batch_size)
-			indexes = np.random.randint(0,dataRows,size = batch_size)
-			#print indexes.shape		
-			#data.e3Make = e3Mat; Or inside
-			# this should not be starting from 1
-
-
-			if (random.uniform(0, 1) > 0.5):
-				data.flip 	= True;
-			else:
-				data.flip 	= False;
-			data.lens = lens;
-			data.out  = out;
 			
-			#flip 	= True;
-        
-			feeddict_new = ntnNetwork.makeFeedDict(data, indexes, 10); # indexes or lstMat
-			_,lossRet = session.run([train_op, loss] , feeddict_new);	# first Neg is wrong
-			print 'loss', lossRet;	
+
+		best_threshold = bestThreshold(devData, session, scorePosNet);
+		print best_threshold;
+		exit();
 
 
-		# just the accuracy reproduced please
-		# just a dummy this 
-		devData.e3Make  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
-		devData.out = out;
-		devData.lens = lens;
-		devData.flip = True;
-		feeddict_new = ntnNetwork.makeFeedDict(devData);
-
-		predictions, e1Ret = session.run([scorePosNet, e1], feeddict_new)
-		
-		predictions = np.ravel(predictions) # Jogar step
-		#print predictions
-		#print e1Ret
-
-		# max and min of predictions
-		# find best here
-		rmax = np.amax(predictions);
-		lmax = np.amin(predictions);
-
-		#print rmax
-
-		best_threshold = np.ones(shape= (data.num_relations, 1)) * lmax;
-		best_acc = np.ones(shape= (data.num_relations, 1)) * (-1);
-		ySet = np.array([True, False], dtype=np.bool)  # put in the false
-		yGroundAll = np.ravel(np.matlib.repmat(ySet, 1, devRows // 2))
-
-		while lmax <= rmax:
-			yRetPred = (predictions <= lmax);
-			start = 0;
-			for i in xrange(data.num_relations):
-				lst = (devData.relations == i);
-				yGnd = yGroundAll[lst];
-
-				end = start + len(yGnd);
-
-				accuracy = np.mean(yRetPred[start:end] == yGnd);
-				start = end;
-
-				if accuracy > best_acc[i]:
-					best_acc[i]       = accuracy; 
-					best_threshold[i] = lmax;
-
-			lmax = lmax + 0.01;
 
 		# just a dummy this
 		testData.e3Make = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
@@ -182,9 +177,6 @@ with tf.Session() as session:
 					lst = (data.relations == i);
 				
 				yGnd = yGroundAll[lst];
-				
-
-
 				yRetPred = (predictions <= best_threshold[i]);
 				end = start + len(yGnd);
 
@@ -197,3 +189,6 @@ with tf.Session() as session:
 				print 'train accuracy: ', (testAccSum / dataRows);	
 		if(i%5 == 0):
 			makeSummary(data, train_writer, session, merged, indexes);
+
+
+

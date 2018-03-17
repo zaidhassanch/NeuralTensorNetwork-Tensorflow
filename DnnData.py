@@ -2,6 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import random
+import csv
 from sklearn.utils import shuffle
 from scipy import spatial
 from scipy.io import loadmat
@@ -150,3 +151,24 @@ def meanCosDist(x,vec):
         distances.append(cosineDistance)
     distances = np.asarray(distances)
     return np.mean(distances)
+
+def loadVars(dataPath):
+    with open(dataPath + 'tree_ids.csv') as csvfile:    #ids will need to have 1 subtracted off them
+        rows = csv.reader(csvfile)
+        tree = list(rows);
+        print(tree[0])
+
+    lens = np.array([len(i) for i in tree])
+    print lens.shape
+    mask = np.arange(lens.max()) < lens[:,None]
+    out = np.zeros(mask.shape, dtype= np.int)
+    out[mask] = np.concatenate(tree)
+    print out
+
+
+
+    E_matrix = np.zeros(shape = (100, 67448));  # As opposed to zeros to ensure error warning
+    matVars = loadmat(dataPath + 'initEmbed.mat');
+    word_embeds = matVars['We'];
+    E_matrix[:,1:] = word_embeds;
+    return out,lens, E_matrix;
