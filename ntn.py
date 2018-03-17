@@ -5,6 +5,8 @@ import time
 import scipy.io
 import warnings
 import random
+
+
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 10;
@@ -12,6 +14,7 @@ slice_size = 3;
 no_of_entities = 38696;
 batch_size = 20000;
 dataSet  = 'Wordnet/';
+savePath = '../output/';
 dataPath = '../data/' + dataSet;
 initialPath = '../data/' + dataSet + 'initialize.mat';
 mat       = scipy.io.loadmat(initialPath);
@@ -60,10 +63,6 @@ class NTN():
         holder = tf.placeholder(tf.float64, [no_of_entities,])
         return holder
 
-    def accuracy(self, y,y_pred):
-        yret = (y_pred > 0.5)
-        a = np.mean(y == yret)
-        return a
 
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
 
@@ -239,6 +238,16 @@ class NTN():
         
         return merged, e1,scorePosNet, loss, train_op
 
+    def createSession(self):
+        merged, e1,scorePosNet, loss, train_op = self.buildGraph();
+        init = tf.global_variables_initializer();
+
+        with tf.Session() as session:
+            train_writer, test_writer, saver = self.saveOps(savePath,session);
+            session.run(init);
+
+        self.session = session;
+
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 
         train_writer =  tf.summary.FileWriter(path + '/train/', sess.graph)
@@ -247,12 +256,7 @@ class NTN():
         saver = tf.train.Saver()
         return train_writer, test_writer, saver
 
-    def evaluate(self, data, accuracy, sess, learningRate, indexes = ""):
-        feeddict_new = self.makeFeedDict(data, learningRate, indexes);
-        accRet= sess.run(accuracy, feeddict_new)
-        return accRet
-
-    def train(self, session, data):
+    def train(self, data):
         dataRows = len(data.e1)
         indexes = np.random.randint(0,dataRows,size = batch_size)
         if (random.uniform(0, 1) > 0.5):
@@ -264,6 +268,12 @@ class NTN():
         #flip   = True;
     
         feeddict_new = self.makeFeedDict(data, indexes, 10); # indexes or lstMat
-        _,lossRet = session.run([self.train_op, self.loss] , feeddict_new);   # first Neg is wrong
+        _,lossRet = self.session.run([self.train_op, self.loss] , feeddict_new);   # first Neg is wrong
         print 'loss', lossRet;
         return;
+
+    def test(self, session, testData, data):
+        best_threshold = ntnEval.bestThreshold(devData, self, session, scorePosNet);
+        print best_threshold;
+        testAccuracy = ntnEval.findAccuracy(testData, data, self, session, scorePosNet, best_threshold);
+        return testAccuracy;
