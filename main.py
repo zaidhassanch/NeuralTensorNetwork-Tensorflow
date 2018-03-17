@@ -39,6 +39,7 @@ W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
 
 
+# Can be changed latter
 with open('DnnData_data.pkl', 'rb') as inputFile:
     data = pickle.load(inputFile)
     testData = pickle.load(inputFile)
@@ -49,41 +50,21 @@ testRows = len(testData.e1)
 devRows = len(devData.e1)
 
 
-with open(dataPath + 'tree_ids.csv') as csvfile:	#ids will need to have 1 subtracted off them
-    rows = csv.reader(csvfile)
-    tree = list(rows);
-    print(tree[0])
+out, E_matrix
 
-lens = np.array([len(i) for i in tree])
-print lens.shape
-mask = np.arange(lens.max()) < lens[:,None]
-out = np.zeros(mask.shape, dtype= np.int)
-out[mask] = np.concatenate(tree)
-#print out
-
-E_matrix = np.zeros(shape = (100, 67448)); 	# As opposed to zeros to ensure error warning
-matVars = loadmat(dataPath + 'initEmbed.mat');
-word_embeds = matVars['We'];
-print 'square ', np.sum(np.square(word_embeds))
-E_matrix[:,1:] = word_embeds
-print 'square ', np.sum(np.square(E_matrix))
-print E_matrix.dtype
+print E_matrix[1:4,1:4]
+exit();
 
 
 ntnNetwork          = NTN(E_matrix, data);
+merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
+init = tf.global_variables_initializer();
+
 def makeSummary(data, writer, sess, merged, indexes = ""):
     feeddict = ntnNetwork.makeFeedDict(data, indexes);
     summary = sess.run(merged, feed_dict=feeddict)
     writer.add_summary(summary, i)
     writer.flush()
-
-
-merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
-
-
-
-init = tf.global_variables_initializer();
-
 
 
 with tf.Session() as session:
