@@ -8,16 +8,11 @@ from scipy import spatial
 from scipy.io import loadmat
 
 
-relat_length = 50
-bias = 0.5
-relation_no = 13
-
-
-
 class DnnData():
 
     out  = "hello";
     lens = "";
+
     def __init__(self, e1, e2, relat, yRef = "", entity_list = "", entity_length = "", num_relations = ""):
         self.e1           = e1;            # index of (vector or english world)
         self.e2           = e2;

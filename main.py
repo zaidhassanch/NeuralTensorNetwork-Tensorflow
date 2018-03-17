@@ -12,6 +12,14 @@ import pickle
 from ntn import NTN
 import DnnData
 
+def makeSummary(data, writer, sess, merged, indexes = ""):
+    feeddict = ntnNetwork.makeFeedDict(data, indexes);
+    summary = sess.run(merged, feed_dict=feeddict)
+    writer.add_summary(summary, i)
+    writer.flush()
+
+    
+
 no_of_entities = 38696;
 flipType = 0;
 batch_size = 20000;
@@ -19,11 +27,6 @@ slice_size = 3;
 corrupt_size = 10;
 
 print "Starting DNN Network ..."
-
-print DnnData.out;
-exit();
-
-
 
 
 # tree ids is going to be used
@@ -44,8 +47,9 @@ with open('DnnData_data.pkl', 'rb') as inputFile:
 
 dataRows = len(data.e1)
 out, lens, E_matrix = DnnData.loadVars(dataPath);
-data.lens = lens;
-data.out  = out;
+
+DnnData.DnnData.out  = out;
+DnnData.DnnData.lens = lens;
 
 print E_matrix[1:4,1:4]
 
@@ -54,13 +58,6 @@ print E_matrix[1:4,1:4]
 ntnNetwork          = NTN(E_matrix, data);
 merged, e1,scorePosNet, loss, train_op = ntnNetwork.buildGraph();
 init = tf.global_variables_initializer();
-
-def makeSummary(data, writer, sess, merged, indexes = ""):
-    feeddict = ntnNetwork.makeFeedDict(data, indexes);
-    summary = sess.run(merged, feed_dict=feeddict)
-    writer.add_summary(summary, i)
-    writer.flush()
-
 
 with tf.Session() as session:
 	train_writer, test_writer, saver = ntnNetwork.saveOps(savePath,session);
@@ -77,11 +74,11 @@ with tf.Session() as session:
 			
 			
 
-		best_threshold = ntnEval.bestThreshold(devData, out, lens, ntnNetwork, session, scorePosNet);
+		best_threshold = ntnEval.bestThreshold(devData, ntnNetwork, session, scorePosNet);
 		print best_threshold;
 		
 
-		testAccuracy = ntnEval.findAccuracy(testData, data, out, lens, ntnNetwork, session, scorePosNet, best_threshold);
+		testAccuracy = ntnEval.findAccuracy(testData, data, ntnNetwork, session, scorePosNet, best_threshold);
 
 		print "Flow completed", testAccuracy;
 		exit();

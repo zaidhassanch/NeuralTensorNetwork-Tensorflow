@@ -7,15 +7,13 @@ import numpy as np
 corrupt_size = 10;
 
 
-def bestThreshold(devData, out , lens, ntnNetwork, session, scorePosNet):
+def bestThreshold(devData, ntnNetwork, session, scorePosNet):
 	bestAccuracy = 0.0;
 	devRows = len(devData.e1)
 
 	# just the accuracy reproduced please
 	# just a dummy this 
 	devData.e3Make  = np.zeros(shape=(devRows * corrupt_size), dtype=np.int)
-	devData.out = out;
-	devData.lens = lens;
 	devData.flip = True;
 	feeddict_new = ntnNetwork.makeFeedDict(devData);
 
@@ -57,14 +55,12 @@ def bestThreshold(devData, out , lens, ntnNetwork, session, scorePosNet):
 	return best_threshold;
 
 
-def findAccuracy(testData, data, out, lens, ntnNetwork, session, scorePosNet, best_threshold):
+def findAccuracy(testData, data, ntnNetwork, session, scorePosNet, best_threshold):
 			# just a dummy this
 	testRows = len(testData.e1)
 	dataRows = len(data.e1)
-	
+
 	testData.e3Make = np.zeros(shape=(testRows * corrupt_size), dtype=np.int)
-	testData.out = out;
-	testData.lens = lens;
 	testData.flip = True;
 
 	for j in xrange(2):
