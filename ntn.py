@@ -18,10 +18,18 @@ dataSet  = 'Wordnet/';
 savePath = '../output/';
 dataPath = '../data/' + dataSet;
 initialPath = '../data/' + dataSet + 'initialize.mat';
+lstE3Path = '../data/' + dataSet + 'lstE3.mat';
+valuesPath = '../data/' + dataSet + 'regValues.mat';
+
 mat       = scipy.io.loadmat(initialPath);
+mat2 = scipy.io.loadmat(lstE3Path);
+valuesMat = scipy.io.loadmat(valuesPath);
 
 W1Mat = mat['W1Mat'];
 W2Mat = mat['W2Mat'];
+e3Mat = np.squeeze(mat2['e3']) - 1;
+lstMat = np.squeeze(mat2['lst']) - 1;
+gradEntmat = valuesMat['entVecGrad'];
 
 
 
@@ -67,8 +75,8 @@ class NTN():
 
     def makeFeedDict(self, data, indexes = "", corrupt_size = 1):
 
-        data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
-
+        #data.e3Make  = np.random.randint(0, data.entity_length, size=(batch_size * corrupt_size));
+        data.e3Make = e3Mat;
         # Keep an eye on version of python for indexes == ""'s interpretation
         with warnings.catch_warnings():
             warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -229,6 +237,7 @@ class NTN():
         self.train_op = train_op;
         self.loss     = loss;
         self.scorePosNet = scorePosNet;
+        self.gradsEntVec = gradsEntVec;
 
         return gradsEntVec, e1,scorePosNet, loss, train_op;
 
@@ -262,15 +271,20 @@ class NTN():
         dataRows = len(data.e1)
         indexes = np.random.randint(0,dataRows,size = batch_size)
         if (random.uniform(0, 1) > 0.5):
-            data.flip   = True;
+            #---------------------------------true
+            data.flip   = False;
         else:
             data.flip   = False;
 
         
         #flip   = True;
-    
-        feeddict_new = self.makeFeedDict(data, indexes, 10); # indexes or lstMat
-        _,lossRet = self.session.run([self.train_op, self.loss] , feeddict_new);   # first Neg is wrong
+        #----------------------------------------
+        feeddict_new = self.makeFeedDict(data, lstMat, 10); # indexes or lstMat
+        #_,lossRet = self.session.run([self.train_op, self.loss] , feeddict_new);   # first Neg is wrong
+        lossRet, geVec = self.session.run([self.loss, self.gradsEntVec] , feeddict_new);   # first Neg is wrong
+        geVec = np.array(geVec[0]);
+        ans = np.amax(np.absolute(np.transpose(geVec) - gradEntmat));
+        print ans;
         print 'loss', lossRet;
         return;
 
