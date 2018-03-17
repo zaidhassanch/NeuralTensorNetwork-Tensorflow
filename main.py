@@ -60,11 +60,11 @@ for i in xrange(200):
 	print 'iter:', i;
 	batches = dataRows // batch_size;
 	
-	for j in xrange(1):
+	#for j in xrange(1):
 
-		ntnNetwork.train(data);
+		#ntnNetwork.train(data);
 
-		
+	data.flip   = False;	
 	testAccuracy = ntnNetwork.test(devData, testData, data);
 
 	print "Flow completed", testAccuracy;
