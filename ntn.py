@@ -7,6 +7,7 @@ import warnings
 import random
 
 
+
 embedding_size = 100;
 slice_size   = 3;
 corrupt_size = 10;
@@ -227,6 +228,7 @@ class NTN():
 
         self.train_op = train_op;
         self.loss     = loss;
+        self.scorePosNet = scorePosNet;
 
         return gradsEntVec, e1,scorePosNet, loss, train_op;
 
@@ -242,11 +244,11 @@ class NTN():
         merged, e1,scorePosNet, loss, train_op = self.buildGraph();
         init = tf.global_variables_initializer();
 
-        with tf.Session() as session:
-            train_writer, test_writer, saver = self.saveOps(savePath,session);
-            session.run(init);
+        self.session = tf.Session();
+        train_writer, test_writer, saver = self.saveOps(savePath,self.session);
+        self.session.run(init);
 
-        self.session = session;
+        return;
 
     def saveOps(self,savePath1,sess):
         path = savePath1 + 'Freebase_Logs/' + time.strftime("%Y-%m-%d-%H-%M-%S") 
@@ -272,8 +274,10 @@ class NTN():
         print 'loss', lossRet;
         return;
 
-    def test(self, session, testData, data):
-        best_threshold = ntnEval.bestThreshold(devData, self, session, scorePosNet);
+    def test(self, devData, testData, data):
+        # remove soon----------------
+        import ntnEval
+        best_threshold = ntnEval.bestThreshold(devData, self, self.session, self.scorePosNet);
         print best_threshold;
-        testAccuracy = ntnEval.findAccuracy(testData, data, self, session, scorePosNet, best_threshold);
+        testAccuracy = ntnEval.findAccuracy(testData, data, self, self.session, self.scorePosNet, best_threshold);
         return testAccuracy;

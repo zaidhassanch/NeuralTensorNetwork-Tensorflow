@@ -1,9 +1,8 @@
 import tensorflow as tf
-from ntn import NTN
 import DnnData
 import numpy as np
 
-# to be removed soon
+# to be removed soon---------
 corrupt_size = 10;
 
 

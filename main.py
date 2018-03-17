@@ -6,7 +6,6 @@ import tensorflow as tf
 from scipy.io import loadmat
 import os
 import psutil
-import ntnEval
 import scipy.io
 import pickle
 from ntn import NTN
@@ -65,9 +64,8 @@ for i in xrange(200):
 
 		ntnNetwork.train(data);
 
-	exit();
 		
-	testAccuracy = ntn.test(session, devData, data);
+	testAccuracy = ntnNetwork.test(devData, testData, data);
 
 	print "Flow completed", testAccuracy;
 	exit();
